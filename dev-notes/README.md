@@ -13,12 +13,15 @@ API promises or validated scientific claims.
 
 ## Scientific development boundary
 
-- Reference-panel copying evidence may be developed as a GLIMPSE2 inference
-  diagnostic.
-- It must not be presented as local ancestry.
-- Any local-ancestry decoder requires a distinct calibrated model, validation
-  cohorts, transition assumptions, uncertainty policy, and scientific claims
-  before it can become package functionality.
+The approved design target is fused population-labelled copying evidence,
+calibrated ancestry emission, and an uncertainty-aware ancestry decoder in the
+same GLIMPSE2 VCF/BCF invocation. The current package does not implement or
+claim this behavior.
+
+[`ancestry-emission.md`](ancestry-emission.md) is the architecture authority for
+that work. It separates raw copying evidence from local ancestry, defines the
+fine-population hierarchy and unphased diploid uncertainty contract, and records
+the native, Python-free simulation gates required before scientific claims.
 
 Add focused notes here only when implementation work begins. Keep product,
 deployment, and unrelated pipeline plans outside this repository.
