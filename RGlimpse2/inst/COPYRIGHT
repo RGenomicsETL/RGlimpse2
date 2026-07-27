@@ -17,6 +17,16 @@ GLIMPSE2 source tree in this repository. Its source files and included LICENSE
 retain the upstream MIT notices. Cite the original GLIMPSE and GLIMPSE2 methods
 when using these programs for scientific work.
 
+Genetic maps
+============
+
+The autosomal and chromosome X map files are copied byte-for-byte from the
+maps directory of pinned GLIMPSE upstream commit
+867113849925f3100bf8ff125e2b9eb1eff51b37 and are distributed with its source
+provenance. RGlimpse2 authors created the minimal Y non-PAR and mitochondrial
+zero-recombination coordinate maps. See genetic_maps/README.md and
+manifest.tsv for boundaries, checksums, and scientific limitations.
+
 SIMDe headers
 =============
 

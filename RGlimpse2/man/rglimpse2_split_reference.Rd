@@ -30,7 +30,8 @@ input region and \code{.bin}.}
 
 \item{executable}{Absolute \code{GLIMPSE2_split_reference} path.}
 
-\item{genetic_map}{Absolute genetic-map path.}
+\item{genetic_map}{Absolute genetic-map path, such as one returned by
+\code{rglimpse2_genetic_map()}.}
 
 \item{seed}{Non-negative random seed.}
 

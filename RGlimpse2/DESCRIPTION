@@ -31,7 +31,8 @@ Description: Builds the pinned in-tree 'GLIMPSE2' chromosome chunking,
     reference splitting, phasing and imputation, and ligation programs against
     the 'htslib' supplied by 'Rduckhts'. Stateless R functions invoke one
     packaged executable with explicit argument vectors and return typed results
-    or typed operational errors. The phasing executable is selected explicitly
+    or typed operational errors. Pinned GRCh37 and GRCh38 genetic maps are
+    installed for explicit offline lookup. The phasing executable is selected explicitly
     from portable and runtime-supported AVX2, AVX-512, or NEON builds without
     searching 'PATH'.
 License: MIT + file LICENSE
@@ -62,6 +63,7 @@ Collate:
     'validation.R'
     'conditions.R'
     'results.R'
+    'genetic-maps.R'
     'simd.R'
     'executables.R'
     'process.R'

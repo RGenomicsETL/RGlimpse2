@@ -20,6 +20,9 @@ reference:
       - rglimpse2_simd_info
       - RGlimpse2Executables
       - RGlimpse2SimdInfo
+  - title: Reference assets
+    contents:
+      - rglimpse2_genetic_maps
   - title: GLIMPSE2 operations
     contents:
       - rglimpse2_chunk

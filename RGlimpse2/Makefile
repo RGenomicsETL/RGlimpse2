@@ -8,7 +8,13 @@ all: check
 bootstrap:
 	Rscript bootstrap.R
 
-source-audit:
+genetic-maps:
+	Rscript tools/update-genetic-maps.R
+
+genetic-map-audit:
+	Rscript tools/check-genetic-maps.R
+
+source-audit: genetic-map-audit
 	../patches/check.sh
 	Rscript tools/check-source-archive.R
 
@@ -45,4 +51,4 @@ clean:
 	rm -f inst/glimpse2/htslib-version
 	rm -f inst/glimpse2/bin/GLIMPSE2_*
 
-.PHONY: all bootstrap source-audit assembly-audit rd readme pkgdown build check check-cran install test clean
+.PHONY: all bootstrap genetic-maps genetic-map-audit source-audit assembly-audit rd readme pkgdown build check check-cran install test clean

@@ -3,6 +3,9 @@
 - Add a nested R package that builds pinned GLIMPSE2 chunk, split-reference,
   phase, and ligate executables against the validated htslib contract supplied
   by `Rduckhts`.
+- Bundle the pinned GRCh37 and GRCh38 autosomal and chromosome X genetic maps,
+  plus explicit zero-recombination coordinate maps for Y non-PAR and
+  mitochondrial sequence, with audited lookup helpers and provenance.
 - Add stateless wrappers with explicit paths, arguments, seeds, and resources;
   typed S7 results and operational errors; and typed contract conditions.
   Split-reference coordinates are canonicalized before output prediction,

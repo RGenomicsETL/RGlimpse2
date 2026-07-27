@@ -32,7 +32,8 @@ rglimpse2_chunk(
 
 \item{executable}{Absolute \code{GLIMPSE2_chunk} path.}
 
-\item{genetic_map}{Absolute genetic-map path.}
+\item{genetic_map}{Absolute genetic-map path, such as one returned by
+\code{rglimpse2_genetic_map()}.}
 
 \item{seed}{Non-negative random seed.}
 

@@ -89,6 +89,7 @@ jobs:
         run: |
           patches/check.sh
           Rscript RGlimpse2/tools/check-source-archive.R
+          Rscript RGlimpse2/tools/check-genetic-maps.R
 
       - name: Show Windows toolchain and Boost contract
         if: runner.os == 'Windows'

@@ -12,8 +12,11 @@
 
 ## Native build notes
 
-- The source package contains a pinned GLIMPSE2 source archive and upstream
-  SIMDe headers. Installed executables account for most of the installed size.
+- The source package contains a pinned GLIMPSE2 source archive, upstream SIMDe
+  headers, and approximately 46 MB of compressed GRCh37/GRCh38 genetic maps.
+  The maps are intentionally bundled for reproducible offline use; 50 are
+  byte-identical to the pinned upstream files and four minimal derived maps are
+  documented and audited by checksum.
 - Installation uses GNU make and no more than two build jobs.
 - htslib is not vendored. Configuration requires the exact validated headers
   and library contract installed by `Rduckhts`.

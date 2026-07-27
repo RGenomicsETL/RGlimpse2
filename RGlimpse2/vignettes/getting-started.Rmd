@@ -29,6 +29,21 @@ if (rglimpse2_is_error(executables)) {
 }
 ```
 
+## Select an installed genetic map
+
+The package includes GRCh37 and GRCh38 maps for chromosomes 1-22, X non-PAR,
+X PAR1, and X PAR2. It also includes explicitly labelled two-anchor,
+zero-recombination coordinate maps for Y non-PAR and mitochondrial sequence.
+Those derived files satisfy the GLIMPSE map format; they are not empirical maps
+or validation of Y or mitochondrial imputation.
+
+```{r maps}
+genetic_map <- rglimpse2_genetic_map("GRCh38", "22")
+y_nonpar_map <- rglimpse2_genetic_map("GRCh38", "Y")
+mitochondrial_map <- rglimpse2_genetic_map("GRCh38", "MT")
+rglimpse2_genetic_maps()
+```
+
 ## Chunk and split the reference
 
 ```{r chunk}
@@ -37,7 +52,7 @@ chunk_result <- rglimpse2_chunk(
   region = "chr22",
   output_chunks = "/work/chunks.chr22.txt",
   executable = executables@chunk,
-  genetic_map = "/data/chr22.b38.gmap.gz",
+  genetic_map = genetic_map,
   seed = 101L,
   threads = 2L
 )
@@ -53,7 +68,7 @@ split_result <- rglimpse2_split_reference(
   output_region = "chr22:150000-550000",
   output_prefix = "/work/reference",
   executable = executables@split_reference,
-  genetic_map = "/data/chr22.b38.gmap.gz",
+  genetic_map = genetic_map,
   seed = 102L,
   threads = 2L
 )

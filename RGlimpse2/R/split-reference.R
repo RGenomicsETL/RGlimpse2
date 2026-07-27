@@ -9,7 +9,8 @@
 #' @param output_prefix Absolute output prefix. GLIMPSE2 appends the normalized
 #'   input region and `.bin`.
 #' @param executable Absolute `GLIMPSE2_split_reference` path.
-#' @param genetic_map Absolute genetic-map path.
+#' @param genetic_map Absolute genetic-map path, such as one returned by
+#'   `rglimpse2_genetic_map()`.
 #' @param seed Non-negative random seed.
 #' @param threads Positive worker count.
 #' @param sparse_maf Rare-variant threshold in `[0, 0.5)`.
