@@ -22,6 +22,10 @@ claim this behavior.
 that work. It separates raw copying evidence from local ancestry, defines the
 fine-population hierarchy and unphased diploid uncertainty contract, and records
 the native, Python-free simulation gates required before scientific claims.
+[`chr22-tree-sequence-benchmarks.md`](chr22-tree-sequence-benchmarks.md) records
+the acceptance contract and audit status of published chromosome-22 simulation
+artifacts; listed leads are not truth benchmarks until they satisfy that
+contract.
 
 Add focused notes here only when implementation work begins. Keep product,
 deployment, and unrelated pipeline plans outside this repository.
