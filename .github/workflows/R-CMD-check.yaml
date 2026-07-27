@@ -116,5 +116,5 @@ jobs:
         if: matrix.config.id == 'linux-x64-release'
         run: |
           RGlimpse2/tools/check-phase-assembly.sh \
-            "$(realpath RGlimpse2/check/RGlimpse2/glimpse2/bin)" \
+            "$(realpath RGlimpse2/check/RGlimpse2.Rcheck/RGlimpse2/glimpse2/bin)" \
             /usr/bin/objdump
