@@ -1,0 +1,9 @@
+id	assembly	contig	chromosome	ploidy	start_bp	end_bp	input_region	output_region	reference	target	sample_ploidy
+grch37_1	GRCh37	1	1	2	100000	149000	1:99900-149100	1:100000-149000	grch37_1/reference.bcf	grch37_1/target.bcf	.
+grch38_chr1	GRCh38	chr1	1	2	100000	149000	chr1:99900-149100	chr1:100000-149000	grch38_chr1/reference.bcf	grch38_chr1/target.bcf	.
+grch37_y	GRCh37	Y	Y	1	2650000	2699000	Y:2649900-2699100	Y:2650000-2699000	grch37_y/reference.bcf	grch37_y/target.bcf	grch37_y/sample-ploidy.txt
+grch38_chry	GRCh38	chrY	Y	1	2782000	2831000	chrY:2781900-2831100	chrY:2782000-2831000	grch38_chry/reference.bcf	grch38_chry/target.bcf	grch38_chry/sample-ploidy.txt
+grch37_m	GRCh37	M	MT	1	500	15200	M:400-15300	M:500-15200	grch37_m/reference.bcf	grch37_m/target.bcf	grch37_m/sample-ploidy.txt
+grch37_chrm	GRCh37	chrM	MT	1	500	15200	chrM:400-15300	chrM:500-15200	grch37_chrm/reference.bcf	grch37_chrm/target.bcf	grch37_chrm/sample-ploidy.txt
+grch38_mt	GRCh38	MT	MT	1	500	15200	MT:400-15300	MT:500-15200	grch38_mt/reference.bcf	grch38_mt/target.bcf	grch38_mt/sample-ploidy.txt
+grch38_chrmt	GRCh38	chrMT	MT	1	500	15200	chrMT:400-15300	chrMT:500-15200	grch38_chrmt/reference.bcf	grch38_chrmt/target.bcf	grch38_chrmt/sample-ploidy.txt

@@ -34,13 +34,17 @@ if (rglimpse2_is_error(executables)) {
 The package includes GRCh37 and GRCh38 maps for chromosomes 1-22, X non-PAR,
 X PAR1, and X PAR2. It also includes explicitly labelled two-anchor,
 zero-recombination coordinate maps for Y non-PAR and mitochondrial sequence.
-Those derived files satisfy the GLIMPSE map format; they are not empirical maps
-or validation of Y or mitochondrial imputation.
+Those derived files satisfy the GLIMPSE map format. Native tests run real
+haploid BCF targets through all four executables for prefixed and unprefixed Y
+and mitochondrial aliases; this validates mechanics, not scientific calibration
+of Y or mitochondrial imputation.
 
 ```{r maps}
 genetic_map <- rglimpse2_genetic_map("GRCh38", "22")
-y_nonpar_map <- rglimpse2_genetic_map("GRCh38", "Y")
-mitochondrial_map <- rglimpse2_genetic_map("GRCh38", "MT")
+y37_nonpar_map <- rglimpse2_genetic_map("GRCh37", "Y")
+y38_nonpar_map <- rglimpse2_genetic_map("GRCh38", "Y")
+mt37_map <- rglimpse2_genetic_map("GRCh37", "chrM")
+mt38_map <- rglimpse2_genetic_map("GRCh38", "MT")
 rglimpse2_genetic_maps()
 ```
 

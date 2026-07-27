@@ -1,5 +1,5 @@
 Package: RGlimpse2
-Title: An 'R' Wrapper of 'GLIMPSE2' for Low-Pass Sequencing Inference
+Title: An 'R' Wrapper for 'GLIMPSE2' Low-Coverage Sequencing Imputation and Phasing
 Version: 0.0.0.9000
 Authors@R: c(
     person(
@@ -45,9 +45,11 @@ Imports:
     Rduckhts (>= 1.5.1-0.1.1),
     S7 (>= 0.2.2)
 Suggests:
+    DBI,
     knitr,
     rmarkdown,
-    tinytest
+    tinytest,
+    vcfppR
 VignetteBuilder: knitr
 SystemRequirements: GNU make, a C++17 compiler, Boost iostreams,
     program_options and serialization libraries, zlib, libbz2, liblzma,

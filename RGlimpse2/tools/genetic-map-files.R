@@ -6,9 +6,9 @@ rglimpse2_zero_map_spec <- function() {
     start_bp = c(2649521L, 1L, 2781480L, 1L),
     end_bp = c(59034049L, 16569L, 56887902L, 16569L),
     file = c(
-      "genetic_maps.b37/chrY.b37.gmap.gz",
+      "genetic_maps.b37/chrY_nonpar.b37.gmap.gz",
       "genetic_maps.b37/chrMT.b37.gmap.gz",
-      "genetic_maps.b38/chrY.b38.gmap.gz",
+      "genetic_maps.b38/chrY_nonpar.b38.gmap.gz",
       "genetic_maps.b38/chrMT.b38.gmap.gz"
     ),
     stringsAsFactors = FALSE
@@ -151,6 +151,15 @@ rglimpse2_update_genetic_maps <- function(repo_root, package_root) {
   if (!all(copied)) stop("failed to copy one or more pinned upstream maps")
 
   zero <- rglimpse2_zero_map_spec()
+  expected <- c(upstream$file, zero$file)
+  observed <- list.files(
+    map_root,
+    pattern = "\\.gmap\\.gz$",
+    recursive = TRUE,
+    full.names = FALSE
+  )
+  stale <- setdiff(observed, expected)
+  if (length(stale)) unlink(file.path(map_root, stale))
   for (index in seq_len(nrow(zero))) {
     rglimpse2_write_zero_map(
       file.path(map_root, zero$file[[index]]),

@@ -1,6 +1,7 @@
 common.mk
 makefile
 phase/src/caller/caller_initialise.cpp
+phase/src/containers/haplotype_set.cpp
 phase/src/models/imputation_hmm.cpp
 phase/src/models/imputation_hmm.h
 phase/src/models/phasing_hmm.h

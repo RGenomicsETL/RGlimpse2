@@ -25,7 +25,20 @@ local({
   )
   expect_identical(
     basename(rglimpse2_genetic_map("GRCh37", "Y")),
-    "chrY.b37.gmap.gz"
+    "chrY_nonpar.b37.gmap.gz"
+  )
+  expect_identical(
+    basename(rglimpse2_genetic_map("GRCh38", "Y")),
+    "chrY_nonpar.b38.gmap.gz"
+  )
+  mt_aliases <- c("M", "MT", "chrM", "chrMT")
+  expect_identical(
+    unique(vapply(
+      mt_aliases,
+      function(alias) rglimpse2_genetic_map("GRCh37", alias),
+      character(1L)
+    )),
+    rglimpse2_genetic_map("GRCh37", "MT")
   )
   expect_identical(
     basename(rglimpse2_genetic_map("GRCh38", "chrM")),

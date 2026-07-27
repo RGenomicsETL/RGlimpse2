@@ -299,7 +299,7 @@ void haplotype_set::allocatePBWT(const int _pbwt_depth, const float _pbwt_modulo
 		}
 		++l_hq;
 	}
-	if  (pbwt_grp.back() < n_com_sites_hq) pbwt_grp.push_back(n_com_sites_hq);
+	if (pbwt_grp.empty() || pbwt_grp.back() < n_com_sites_hq) pbwt_grp.push_back(n_com_sites_hq);
 	nstored = pbwt_grp.size();
 
 	K=pbwt_depth;

@@ -1,3 +1,4 @@
 0001-add-downstream-native-build-hooks.patch
 0002-port-phase-hmms-to-explicit-simde.patch
 0003-use-portable-reference-environment-setup.patch
+0004-handle-zero-span-genetic-maps.patch

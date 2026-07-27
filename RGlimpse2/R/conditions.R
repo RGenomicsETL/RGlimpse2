@@ -85,7 +85,12 @@ rglimpse2_error_value <- function(
         process = {
           .rgl_assert_scalar_character(operation, "operation")
           if (length(status)) {
-            status <- .rgl_assert_integer(status, "status", minimum = 0L)
+            status <- .rgl_assert_integer(
+              status,
+              "status",
+              minimum = -.Machine$integer.max,
+              maximum = .Machine$integer.max
+            )
           }
           do.call(
             RGlimpse2ProcessErrorValue,

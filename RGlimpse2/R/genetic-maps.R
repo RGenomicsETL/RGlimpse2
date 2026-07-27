@@ -8,7 +8,8 @@
 #'
 #' @param assembly Reference assembly, either `"GRCh37"` or `"GRCh38"`.
 #' @param chromosome One autosome named `"1"` through `"22"`, `"X"`, `"Y"`, or
-#'   `"MT"`. A leading `"chr"` is accepted; `"M"` is normalized to `"MT"`.
+#'   `"MT"`. A leading `"chr"` is accepted. Mitochondrial aliases `"M"`,
+#'   `"MT"`, `"chrM"`, and `"chrMT"` all resolve to the same map.
 #' @param region Empty to select the chromosome default, or one of `"full"`,
 #'   `"nonpar"`, `"par1"`, or `"par2"`. The default is `"nonpar"` for X and
 #'   Y and `"full"` otherwise.
@@ -18,6 +19,8 @@
 #' @examples
 #' rglimpse2_genetic_map("GRCh38", "22")
 #' rglimpse2_genetic_map("GRCh37", "Y")
+#' rglimpse2_genetic_map("GRCh38", "Y")
+#' rglimpse2_genetic_map("GRCh37", "chrM")
 #' rglimpse2_genetic_map("GRCh38", "MT")
 #' head(rglimpse2_genetic_maps())
 #' @name rglimpse2_genetic_maps

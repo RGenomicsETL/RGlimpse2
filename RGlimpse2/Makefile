@@ -14,6 +14,12 @@ genetic-maps:
 genetic-map-audit:
 	Rscript tools/check-genetic-maps.R
 
+tiny-data:
+	Rscript tools/create-tiny-imputation-targets.R
+
+tiny-data-audit:
+	Rscript tools/check-tiny-imputation-targets.R
+
 source-audit: genetic-map-audit
 	../patches/check.sh
 	Rscript tools/check-source-archive.R
@@ -51,4 +57,4 @@ clean:
 	rm -f inst/glimpse2/htslib-version
 	rm -f inst/glimpse2/bin/GLIMPSE2_*
 
-.PHONY: all bootstrap genetic-maps genetic-map-audit source-audit assembly-audit rd readme pkgdown build check check-cran install test clean
+.PHONY: all bootstrap genetic-maps genetic-map-audit tiny-data tiny-data-audit source-audit assembly-audit rd readme pkgdown build check check-cran install test clean

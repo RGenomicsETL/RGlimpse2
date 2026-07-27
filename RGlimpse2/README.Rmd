@@ -22,8 +22,9 @@ knitr::opts_chunk$set(
 [![pkgdown](https://github.com/RGenomicsETL/RGlimpse2/actions/workflows/pkgdown.yaml/badge.svg)](https://rgenomicsetl.github.io/RGlimpse2/)
 [![R-universe](https://RGenomicsETL.r-universe.dev/RGlimpse2/badges/version)](https://RGenomicsETL.r-universe.dev/RGlimpse2)
 
-`RGlimpse2` is an R wrapper of GLIMPSE2 for low-pass sequencing inference. It
-builds and installs the pinned `GLIMPSE2_chunk`, `GLIMPSE2_split_reference`,
+`RGlimpse2` runs GLIMPSE2 genotype imputation and phasing for low-coverage
+whole-genome sequencing from R. It builds and installs the pinned
+`GLIMPSE2_chunk`, `GLIMPSE2_split_reference`,
 `GLIMPSE2_phase`, and `GLIMPSE2_ligate` programs, then invokes one child
 executable per operation through direct `processx` argument vectors.
 
@@ -57,14 +58,26 @@ library(RGlimpse2)
 
 rglimpse2_genetic_map("GRCh38", "22")
 rglimpse2_genetic_map("GRCh38", "X", region = "par1")
+rglimpse2_genetic_map("GRCh37", "Y")
 rglimpse2_genetic_map("GRCh38", "Y")
+rglimpse2_genetic_map("GRCh37", "chrM")
 rglimpse2_genetic_map("GRCh38", "MT")
 head(rglimpse2_genetic_maps())
 ```
 
-The Y and mitochondrial files contain two anchors at `0` cM because GLIMPSE
-requires at least two map entries. They are not empirical recombination maps or
-claims that Y or mitochondrial imputation is validated.
+| Assembly | Map | Coordinates |
+|---|---|---:|
+| GRCh37 | Y non-PAR | 2,649,521-59,034,049 |
+| GRCh38 | Y non-PAR | 2,781,480-56,887,902 |
+| GRCh37 | mitochondrial (`M`, `MT`, `chrM`, or `chrMT`) | 1-16,569 |
+| GRCh38 | mitochondrial (`M`, `MT`, `chrM`, or `chrMT`) | 1-16,569 |
+
+The Y files are explicitly named `chrY_nonpar.*.gmap.gz`. The Y and
+mitochondrial files contain two anchors at `0` cM because GLIMPSE requires at
+least two map entries. The native conformance tests run small haploid BCF
+reference/target pairs through chunk, split-reference, phase, and ligate using
+`Y`, `chrY`, `M`, `MT`, `chrM`, and `chrMT`. This proves contig-label mechanics,
+not scientific calibration of Y or mitochondrial imputation.
 
 ## One explicit operation at a time
 
@@ -127,9 +140,11 @@ rglimpse2_simd_info()
 scalar <- rglimpse2_executables(phase_backend = "scalar")
 ```
 
-The package's native end-to-end test runs all four real GLIMPSE2 operations on
-a synthetic BCF fixture and requires byte-identical fixed-seed phase output
-from every runtime-supported backend.
+The native tests run all four packaged GLIMPSE2 programs against eight tiny
+`vcfppR`-generated and `Rduckhts`-indexed BCF reference/target pairs. They cover
+`1`/`chr1`, `Y`/`chrY`, and `M`/`MT`/`chrM`/`chrMT`, including haploid Y and
+mitochondrial targets, and require identical fixed-seed phase records from every
+runtime-supported backend. No executable test doubles are used.
 
 ## Building this fork
 

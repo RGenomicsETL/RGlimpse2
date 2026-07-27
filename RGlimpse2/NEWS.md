@@ -5,7 +5,13 @@
   by `Rduckhts`.
 - Bundle the pinned GRCh37 and GRCh38 autosomal and chromosome X genetic maps,
   plus explicit zero-recombination coordinate maps for Y non-PAR and
-  mitochondrial sequence, with audited lookup helpers and provenance.
+  mitochondrial sequence, with audited lookup helpers and provenance. Map
+  lookup accepts chromosome names with or without `chr` and treats `M`, `MT`,
+  `chrM`, and `chrMT` as mitochondrial aliases.
+- Handle zero-span maps safely in phase PBWT grouping. Replace executable test
+  doubles with reproducible `vcfppR`-generated BCF reference/target pairs that
+  run the real chunk, split-reference, phase, and ligate executables across
+  autosomal, Y, and mitochondrial contig aliases.
 - Add stateless wrappers with explicit paths, arguments, seeds, and resources;
   typed S7 results and operational errors; and typed contract conditions.
   Split-reference coordinates are canonicalized before output prediction,

@@ -4,7 +4,7 @@
 \name{RGlimpse2-package}
 \alias{RGlimpse2}
 \alias{RGlimpse2-package}
-\title{RGlimpse2: an R wrapper of GLIMPSE2 for low-pass sequencing inference}
+\title{RGlimpse2: an R wrapper for GLIMPSE2 imputation and phasing}
 \description{
 RGlimpse2 packages a pinned GLIMPSE2 fork and exposes one stateless wrapper
 per native executable. Contract violations are typed conditions; expected

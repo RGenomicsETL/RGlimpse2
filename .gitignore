@@ -88,8 +88,8 @@ dkms.conf
 # Genetics files
 *.vcf.gz*
 *.bcf*
-!RGlimpse2/inst/tinytest/fixtures/data/*.bcf
-!RGlimpse2/inst/tinytest/fixtures/data/*.bcf.csi
+!RGlimpse2/inst/tinytest/tiny-imputation/**/*.bcf
+!RGlimpse2/inst/tinytest/tiny-imputation/**/*.bcf.csi
 *_coverage.txt.gz
 
 docs/.jekyll-cache/

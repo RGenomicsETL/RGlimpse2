@@ -13,7 +13,8 @@ rglimpse2_genetic_map(assembly = "GRCh38", chromosome, region = character())
 \item{assembly}{Reference assembly, either \code{"GRCh37"} or \code{"GRCh38"}.}
 
 \item{chromosome}{One autosome named \code{"1"} through \code{"22"}, \code{"X"}, \code{"Y"}, or
-\code{"MT"}. A leading \code{"chr"} is accepted; \code{"M"} is normalized to \code{"MT"}.}
+\code{"MT"}. A leading \code{"chr"} is accepted. Mitochondrial aliases \code{"M"},
+\code{"MT"}, \code{"chrM"}, and \code{"chrMT"} all resolve to the same map.}
 
 \item{region}{Empty to select the chromosome default, or one of \code{"full"},
 \code{"nonpar"}, \code{"par1"}, or \code{"par2"}. The default is \code{"nonpar"} for X and
@@ -34,6 +35,8 @@ two-anchor, zero-recombination coordinate maps, not empirical maps.
 \examples{
 rglimpse2_genetic_map("GRCh38", "22")
 rglimpse2_genetic_map("GRCh37", "Y")
+rglimpse2_genetic_map("GRCh38", "Y")
+rglimpse2_genetic_map("GRCh37", "chrM")
 rglimpse2_genetic_map("GRCh38", "MT")
 head(rglimpse2_genetic_maps())
 }

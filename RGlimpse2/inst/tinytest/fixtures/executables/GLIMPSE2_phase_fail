@@ -1,3 +1,0 @@
-#!/bin/sh
-printf 'deliberate phase fixture failure\n' >&2
-exit 7

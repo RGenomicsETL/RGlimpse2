@@ -28,9 +28,12 @@ recombination maps. Two entries are required by the GLIMPSE map reader.
 | GRCh37 | mitochondrial | 1-16,569 | NC_012920.1 |
 | GRCh38 | mitochondrial | 1-16,569 | NC_012920.1 |
 
-The Y intervals are the principal non-PAR intervals between the assembly's PAR1
-and PAR2 boundaries. The mitochondrial reference is the revised Cambridge
-Reference Sequence used by both assemblies.
+The installed Y files are `chrY_nonpar.b37.gmap.gz` and
+`chrY_nonpar.b38.gmap.gz`. The Y intervals are the principal non-PAR intervals
+between each assembly's PAR1 and PAR2 boundaries. The mitochondrial files are
+`chrMT.b37.gmap.gz` and `chrMT.b38.gmap.gz`; lookup accepts `M`, `MT`, `chrM`,
+and `chrMT`. The mitochondrial reference is the revised Cambridge Reference
+Sequence used by both assemblies.
 
 A zero-recombination map does not by itself validate Y or mitochondrial
 imputation. Reference-panel construction, haploid sample declarations, input

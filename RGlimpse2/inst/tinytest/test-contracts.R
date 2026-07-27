@@ -1,17 +1,5 @@
 local({
-  fixture_bin <- system.file(
-    "tinytest",
-    "fixtures",
-    "executables",
-    package = "RGlimpse2"
-  )
-  windows <- identical(.Platform$OS.type, "windows")
-  fixture_program <- function(name) file.path(fixture_bin, name)
-  executables <- if (windows) {
-    rglimpse2_executables(phase_backend = "scalar")
-  } else {
-    rglimpse2_executables(directory = fixture_bin)
-  }
+  executables <- rglimpse2_executables(phase_backend = "scalar")
   expect_true(S7::S7_inherits(executables, RGlimpse2Executables))
 
   capture_contract <- function(expression) {
@@ -28,7 +16,7 @@ local({
   expect_identical(incomplete$code, "incomplete_executable_set")
 
   external_backend <- capture_contract(rglimpse2_executables(
-    directory = fixture_bin,
+    directory = dirname(executables@chunk),
     phase_backend = "scalar"
   ))
   expect_true(inherits(external_backend, "rglimpse2_contract_violation"))
@@ -45,6 +33,16 @@ local({
   ))
   expect_true(inherits(bad_error, "rglimpse2_contract_violation"))
   expect_identical(bad_error$code, "invalid_error_value")
+
+  signaled_process <- rglimpse2_error_value(
+    message = "child terminated by signal",
+    kind = "process",
+    code = "child_signaled",
+    operation = "phase",
+    status = -11L
+  )
+  expect_true(S7::S7_inherits(signaled_process, RGlimpse2ProcessErrorValue))
+  expect_identical(signaled_process@status, -11L)
 
   root <- tempfile("rglimpse2-contracts-")
   dir.create(root, recursive = TRUE)
@@ -73,6 +71,17 @@ local({
   ))
   expect_true(inherits(bad_number, "rglimpse2_contract_violation"))
   expect_identical(bad_number$code, "invalid_number")
+
+  bad_threads <- capture_contract(rglimpse2_phase(
+    input_gl = input_gl,
+    reference_bin = reference_bin,
+    output_bcf = file.path(root, "threads.bcf"),
+    executable = executables@phase,
+    seed = 1L,
+    threads = 2L
+  ))
+  expect_true(inherits(bad_threads, "rglimpse2_contract_violation"))
+  expect_identical(bad_threads$code, "phase_threads_must_be_one")
 
   bad_extension <- capture_contract(rglimpse2_phase(
     input_gl = input_gl,
@@ -116,19 +125,6 @@ local({
   expect_true(S7::S7_inherits(missing_directory, RGlimpse2OutputErrorValue))
   expect_identical(missing_directory@code, "output_directory_missing")
 
-  if (!windows) {
-    no_output <- rglimpse2_phase(
-      input_gl = input_gl,
-      reference_bin = reference_bin,
-      output_bcf = file.path(root, "absent.bcf"),
-      executable = fixture_program("GLIMPSE2_phase_no_output"),
-      seed = 1L
-    )
-    expect_true(S7::S7_inherits(no_output, RGlimpse2OutputErrorValue))
-    expect_identical(no_output@code, "required_output_missing")
-    expect_identical(no_output@details$missing, "output_bcf")
-  }
-
   split_prefix <- file.path(root, "canonical")
   canonical_bin <- paste0(split_prefix, "_chr1_1_200.bin")
   file.create(canonical_bin)
@@ -149,20 +145,6 @@ local({
   expect_identical(canonical_occupied@details$path, canonical_bin)
 
   unlink(canonical_bin)
-  if (!windows) {
-    canonical_success <- rglimpse2_split_reference(
-      reference_bcf = input_gl,
-      input_region = "chr1:0001-0200",
-      output_region = "chr1:0050-0150",
-      output_prefix = split_prefix,
-      executable = executables@split_reference,
-      genetic_map = reference_bin,
-      seed = 1L
-    )
-    expect_true(S7::S7_inherits(canonical_success, RGlimpse2RunResult))
-    expect_identical(canonical_success@outputs$reference_bin, canonical_bin)
-    expect_true(file.exists(canonical_bin))
-  }
 
   overflowing_region <- capture_contract(rglimpse2_split_reference(
     reference_bcf = input_gl,

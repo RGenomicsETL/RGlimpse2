@@ -24,7 +24,7 @@ GRCh37	22	full	empirical	16051347	51229805	0	74.109562	45329	genetic_maps.b37/ch
 GRCh37	X	nonpar	empirical	2703391	154929412	0	180.837755	89589	genetic_maps.b37/chrX.b37.gmap.gz	GLIMPSE-pinned-upstream	9a49b65c2c2cdd1ff91b9f3b641f82bd
 GRCh37	X	par1	empirical	150118	2695340	0	20.837792	1383	genetic_maps.b37/chrX_par1.b37.gmap.gz	GLIMPSE-pinned-upstream	dfed78356436aa94294d0e1e7ca7fc46
 GRCh37	X	par2	empirical	154969038	155235078	0	0.347344	179	genetic_maps.b37/chrX_par2.b37.gmap.gz	GLIMPSE-pinned-upstream	2a99da133d97d88ae7ae175430dd1542
-GRCh37	Y	nonpar	zero-recombination	2649521	59034049	0	0	2	genetic_maps.b37/chrY.b37.gmap.gz	RGlimpse2-derived	6f8ddcdffc0a064f2e2688083e0d5705
+GRCh37	Y	nonpar	zero-recombination	2649521	59034049	0	0	2	genetic_maps.b37/chrY_nonpar.b37.gmap.gz	RGlimpse2-derived	6f8ddcdffc0a064f2e2688083e0d5705
 GRCh37	MT	full	zero-recombination	1	16569	0	0	2	genetic_maps.b37/chrMT.b37.gmap.gz	RGlimpse2-derived	d915c35eb0e1d41b1e06a66fbbd054f1
 GRCh38	1	full	empirical	55550	248924793	0	286.279234	255802	genetic_maps.b38/chr1.b38.gmap.gz	GLIMPSE-pinned-upstream	42a89f09643b0d45aaa0bede136a19d4
 GRCh38	2	full	empirical	12994	242148846	0	268.839622	286250	genetic_maps.b38/chr2.b38.gmap.gz	GLIMPSE-pinned-upstream	604b5992c3dfbbb48f79087144c060ec
@@ -51,5 +51,5 @@ GRCh38	22	full	empirical	15287922	50791377	1.457757	74.109562	45141	genetic_maps
 GRCh38	X	nonpar	empirical	2785350	155699751	0	180.837755	89236	genetic_maps.b38/chrX.b38.gmap.gz	GLIMPSE-pinned-upstream	368f854f1e16d15b037e4ce92a1dd0cc
 GRCh38	X	par1	empirical	233451	2777299	0	20.837792	1383	genetic_maps.b38/chrX_par1.b38.gmap.gz	GLIMPSE-pinned-upstream	61bfe10c7e8ba5871ffccbd011d0ccbd
 GRCh38	X	par2	empirical	155739376	156005413	0	0.347344	179	genetic_maps.b38/chrX_par2.b38.gmap.gz	GLIMPSE-pinned-upstream	b19ef11d2fa457e0568e457dcb24873b
-GRCh38	Y	nonpar	zero-recombination	2781480	56887902	0	0	2	genetic_maps.b38/chrY.b38.gmap.gz	RGlimpse2-derived	0560f6197001529ca7caeb7ff37d763e
+GRCh38	Y	nonpar	zero-recombination	2781480	56887902	0	0	2	genetic_maps.b38/chrY_nonpar.b38.gmap.gz	RGlimpse2-derived	0560f6197001529ca7caeb7ff37d763e
 GRCh38	MT	full	zero-recombination	1	16569	0	0	2	genetic_maps.b38/chrMT.b38.gmap.gz	RGlimpse2-derived	d915c35eb0e1d41b1e06a66fbbd054f1
