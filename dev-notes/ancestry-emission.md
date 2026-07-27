@@ -68,6 +68,10 @@ variant-major VCF layout, are not additional inference passes.
    and is included in the source-archive reconstruction audit.
 10. Scalar execution is the numerical oracle. SIMD backends must satisfy the
     declared ancestry-emission tolerance as well as genotype conformance.
+11. Genomic simulation, calibration, and end-to-end ancestry validation for the
+    first implementation are restricted to chromosome 22. Every artifact
+    declares its assembly and exact contig coordinate contract; no implicit
+    liftover or whole-genome accuracy claim is permitted.
 
 ## Current GLIMPSE2 insertion point
 
@@ -174,7 +178,7 @@ ARCHes reimplementation.
 
 ### 3. Local-ancestry posterior and calls
 
-A genome-wide ancestry HMM smooths window emissions. Its first exact scope has
+A contig-wide ancestry HMM smooths window emissions. Its first exact scope has
 unordered diploid leaf-pair states. Transitions allow no change or a change in
 one member of the pair between adjacent windows. Initial/stationary ancestry
 weights and switch parameters are explicit model values or are fitted by a
@@ -257,24 +261,49 @@ Validation has no Python path.
 ### Native components
 
 - focused C/C++ exhaustive HMM and pedigree-mosaic generators;
-- SLiM's C++ executable with authored Eidos scenarios for forward simulations;
+- published, checksummed chromosome-22 simulation tree sequences with complete
+  provenance and declared source-population semantics;
+- SLiM's C++ executable with authored Eidos scenarios only where published
+  artifacts do not exercise a required counterexample;
 - the stable tskit C API for `.trees` loading, traversal, simplification, and
   exact ancestry-interval extraction;
 - R for orchestration, manifests, metrics, and reports;
 - `vcfppR` and `Rduckhts` for deterministic VCF/BCF/GL construction and indexing.
 
-A future standalone `Rtskit` package is a direct C binding to the tskit C API and
+The standalone `Rtskit` package is the direct C binding to the tskit C API and
 is of general interest, but RGlimpse2 must not require it at runtime. Validation
-may use it when available while retaining native command-line truth extraction
-as an independent path.
+may use it while retaining native command-line truth extraction as an
+independent path.
 
 ### Truth authority
 
-Each simulation produces one checksummed `.trees` file as the ancestry and
-pedigree truth authority. Genotypes, low-coverage likelihoods, ancestry BED/TSV,
-and evaluation inputs are derived from that same artifact. Real-panel mosaic
-simulations use held-out 1000 Genomes/HGDP haplotypes, the packaged genetic map,
-and explicit donor tracts; reference/test leakage is prohibited.
+Each benchmark has one checksummed `.trees` file as the ancestry and pedigree
+truth authority. It may be a published simulation artifact or one produced by a
+pinned native scenario. Static published artifacts are consumed as
+language-neutral data; their original generator, version, model, seed, DOI or
+URL, license, checksum, sample-node mapping, and ancestry semantics are recorded
+without requiring that generator at package runtime. Genotypes, low-coverage
+likelihoods, ancestry BED/TSV, and evaluation inputs are derived from that same
+artifact. Real-panel mosaic simulations use held-out 1000 Genomes/HGDP
+haplotypes, the packaged genetic map, and explicit donor tracts; reference/test
+leakage is prohibited.
+
+### Chromosome scope
+
+All genomic benchmark data for the first ancestry implementation use only
+chromosome 22. A benchmark is either GRCh37 chromosome 22 or GRCh38 chromosome
+22 and must match the corresponding packaged genetic map, reference panel, and
+BCF contig declaration exactly. Benchmarks are never silently truncated,
+renamed, or lifted between assemblies. Calibration and final evaluation use
+disjoint chromosome-22 simulations, donor partitions, or seeds.
+
+This scope exercises an autosomal diploid contig, recombination breakpoints,
+multiple GLIMPSE windows, sparse low-coverage likelihoods, PBWT conditioning,
+and indexed BCF output while keeping native validation bounded. It does not
+support claims about sex chromosomes, mitochondrial inheritance, assembly
+transfer, or whole-genome calibration. Tiny exhaustive kernel fixtures may use
+abstract coordinates because they validate mathematics rather than genomic
+coverage.
 
 ### Validation tiers
 
@@ -286,7 +315,8 @@ and explicit donor tracts; reference/test leakage is prohibited.
    - compare scalar and every runtime-supported SIMD backend.
 
 2. **Held-out real-panel mosaics**
-   - construct exact ancestry tracts from 1000 Genomes and HGDP donors;
+   - construct exact chromosome-22 ancestry tracts from 1000 Genomes and HGDP
+     donors;
    - simulate low coverage across a declared coverage grid;
    - vary admixture time, proportions, tract length, and phase uncertainty;
    - test balanced and severely unequal panel sizes;
@@ -294,7 +324,8 @@ and explicit donor tracts; reference/test leakage is prohibited.
    - introduce bounded label noise and missing likelihoods.
 
 3. **Forward population simulations**
-   - use pinned SLiM/Eidos scenarios and tskit tree-sequence recording;
+   - prefer audited published chromosome-22 `.trees` artifacts and use pinned
+     SLiM/Eidos scenarios only for missing validation cases;
    - include unseen or poorly represented populations and hierarchical sisters;
    - preserve exact local ancestry from founder/population metadata.
 
