@@ -1,7 +1,8 @@
 ## Test environments
 
 - local Ubuntu 24.04, R-devel
-- GitHub Actions Linux, macOS, and Windows on x86_64 and ARM64
+- GitHub Actions Linux release/devel, macOS release on x86_64/ARM64, and
+  Windows release on x86_64
 - GitHub Actions Ubuntu with R oldrel, release, and devel
 
 ## R CMD check results
