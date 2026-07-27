@@ -24,7 +24,8 @@ rglimpse2_genetic_map(assembly = "GRCh38", chromosome, region = character())
 - chromosome:
 
   One autosome named `"1"` through `"22"`, `"X"`, `"Y"`, or `"MT"`. A
-  leading `"chr"` is accepted; `"M"` is normalized to `"MT"`.
+  leading `"chr"` is accepted. Mitochondrial aliases `"M"`, `"MT"`,
+  `"chrM"`, and `"chrMT"` all resolve to the same map.
 
 - region:
 
@@ -44,7 +45,11 @@ its absolute installed path.
 rglimpse2_genetic_map("GRCh38", "22")
 #> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b38/chr22.b38.gmap.gz"
 rglimpse2_genetic_map("GRCh37", "Y")
-#> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b37/chrY.b37.gmap.gz"
+#> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b37/chrY_nonpar.b37.gmap.gz"
+rglimpse2_genetic_map("GRCh38", "Y")
+#> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b38/chrY_nonpar.b38.gmap.gz"
+rglimpse2_genetic_map("GRCh37", "chrM")
+#> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b37/chrMT.b37.gmap.gz"
 rglimpse2_genetic_map("GRCh38", "MT")
 #> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b38/chrMT.b38.gmap.gz"
 head(rglimpse2_genetic_maps())

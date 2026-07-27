@@ -88,12 +88,16 @@ names, intervals, seeds, and resource values. Calls do not search
 non-PAR, X PAR1, and X PAR2. It also includes explicitly labelled
 two-anchor, zero-recombination coordinate maps for Y non-PAR and
 mitochondrial sequence. Those derived files satisfy the GLIMPSE map
-format; they are not empirical maps or validation of Y or mitochondrial
-imputation.</p>
+format. Native tests run real haploid BCF targets through all four
+executables for prefixed and unprefixed Y and mitochondrial aliases;
+this validates mechanics, not scientific calibration of Y or
+mitochondrial imputation.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">genetic_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"22"</span><span class="op">)</span></span>
-<span><span class="va">y_nonpar_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"Y"</span><span class="op">)</span></span>
-<span><span class="va">mitochondrial_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"MT"</span><span class="op">)</span></span>
+<span><span class="va">y37_nonpar_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh37"</span>, <span class="st">"Y"</span><span class="op">)</span></span>
+<span><span class="va">y38_nonpar_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"Y"</span><span class="op">)</span></span>
+<span><span class="va">mt37_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh37"</span>, <span class="st">"chrM"</span><span class="op">)</span></span>
+<span><span class="va">mt38_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"MT"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_maps</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">

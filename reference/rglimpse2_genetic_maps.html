@@ -70,7 +70,8 @@ two-anchor, zero-recombination coordinate maps, not empirical maps.</p>
 
 <dt id="arg-chromosome">chromosome<a class="anchor" aria-label="anchor" href="#arg-chromosome"></a></dt>
 <dd><p>One autosome named <code>"1"</code> through <code>"22"</code>, <code>"X"</code>, <code>"Y"</code>, or
-<code>"MT"</code>. A leading <code>"chr"</code> is accepted; <code>"M"</code> is normalized to <code>"MT"</code>.</p></dd>
+<code>"MT"</code>. A leading <code>"chr"</code> is accepted. Mitochondrial aliases <code>"M"</code>,
+<code>"MT"</code>, <code>"chrM"</code>, and <code>"chrMT"</code> all resolve to the same map.</p></dd>
 
 
 <dt id="arg-region">region<a class="anchor" aria-label="anchor" href="#arg-region"></a></dt>
@@ -91,7 +92,11 @@ its absolute installed path.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">rglimpse2_genetic_map</span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"22"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b38/chr22.b38.gmap.gz"</span>
 <span class="r-in"><span><span class="fu">rglimpse2_genetic_map</span><span class="op">(</span><span class="st">"GRCh37"</span>, <span class="st">"Y"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b37/chrY.b37.gmap.gz"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b37/chrY_nonpar.b37.gmap.gz"</span>
+<span class="r-in"><span><span class="fu">rglimpse2_genetic_map</span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"Y"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b38/chrY_nonpar.b38.gmap.gz"</span>
+<span class="r-in"><span><span class="fu">rglimpse2_genetic_map</span><span class="op">(</span><span class="st">"GRCh37"</span>, <span class="st">"chrM"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b37/chrMT.b37.gmap.gz"</span>
 <span class="r-in"><span><span class="fu">rglimpse2_genetic_map</span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"MT"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/home/runner/work/_temp/Library/RGlimpse2/genetic_maps/genetic_maps.b38/chrMT.b38.gmap.gz"</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu">rglimpse2_genetic_maps</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>

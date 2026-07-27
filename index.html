@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>An R Wrapper of GLIMPSE2 for Low-Pass Sequencing Inference • RGlimpse2</title>
+<title>An R Wrapper for GLIMPSE2 Low-Coverage Sequencing Imputation and Phasing • RGlimpse2</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="An R Wrapper of GLIMPSE2 for Low-Pass Sequencing Inference">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="An R Wrapper for GLIMPSE2 Low-Coverage Sequencing Imputation and Phasing">
 <meta name="description" content="Builds the pinned in-tree GLIMPSE2 chromosome chunking, reference splitting, phasing and imputation, and ligation programs against the htslib supplied by Rduckhts. Stateless R functions invoke one packaged executable with explicit argument vectors and return typed results or typed operational errors. Pinned GRCh37 and GRCh38 genetic maps are installed for explicit offline lookup. The phasing executable is selected explicitly from portable and runtime-supported AVX2, AVX-512, or NEON builds without searching PATH.">
 <meta property="og:description" content="Builds the pinned in-tree GLIMPSE2 chromosome chunking, reference splitting, phasing and imputation, and ligation programs against the htslib supplied by Rduckhts. Stateless R functions invoke one packaged executable with explicit argument vectors and return typed results or typed operational errors. Pinned GRCh37 and GRCh38 genetic maps are installed for explicit offline lookup. The phasing executable is selected explicitly from portable and runtime-supported AVX2, AVX-512, or NEON builds without searching PATH.">
 </head>
@@ -56,7 +56,7 @@
 <div class="page-header"><h1 id="rglimpse2">RGlimpse2<a class="anchor" aria-label="anchor" href="#rglimpse2"></a>
 </h1></div>
 <p><a href="https://github.com/RGenomicsETL/RGlimpse2/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/RGenomicsETL/RGlimpse2/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://rgenomicsetl.github.io/RGlimpse2/"><img src="https://github.com/RGenomicsETL/RGlimpse2/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a> <a href="https://RGenomicsETL.r-universe.dev/RGlimpse2" class="external-link"><img src="https://RGenomicsETL.r-universe.dev/RGlimpse2/badges/version" alt="R-universe"></a></p>
-<p><code>RGlimpse2</code> is an R wrapper of GLIMPSE2 for low-pass sequencing inference. It builds and installs the pinned <code>GLIMPSE2_chunk</code>, <code>GLIMPSE2_split_reference</code>, <code>GLIMPSE2_phase</code>, and <code>GLIMPSE2_ligate</code> programs, then invokes one child executable per operation through direct <code>processx</code> argument vectors.</p>
+<p><code>RGlimpse2</code> runs GLIMPSE2 genotype imputation and phasing for low-coverage whole-genome sequencing from R. It builds and installs the pinned <code>GLIMPSE2_chunk</code>, <code>GLIMPSE2_split_reference</code>, <code>GLIMPSE2_phase</code>, and <code>GLIMPSE2_ligate</code> programs, then invokes one child executable per operation through direct <code>processx</code> argument vectors.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -80,10 +80,46 @@
 <span></span>
 <span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"22"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"X"</span>, region <span class="op">=</span> <span class="st">"par1"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh37"</span>, <span class="st">"Y"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"Y"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh37"</span>, <span class="st">"chrM"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"MT"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_maps</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>The Y and mitochondrial files contain two anchors at <code>0</code> cM because GLIMPSE requires at least two map entries. They are not empirical recombination maps or claims that Y or mitochondrial imputation is validated.</p>
+<table class="table">
+<colgroup>
+<col width="12%">
+<col width="59%">
+<col width="27%">
+</colgroup>
+<thead><tr>
+<th>Assembly</th>
+<th>Map</th>
+<th align="right">Coordinates</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>GRCh37</td>
+<td>Y non-PAR</td>
+<td align="right">2,649,521-59,034,049</td>
+</tr>
+<tr>
+<td>GRCh38</td>
+<td>Y non-PAR</td>
+<td align="right">2,781,480-56,887,902</td>
+</tr>
+<tr>
+<td>GRCh37</td>
+<td>mitochondrial (<code>M</code>, <code>MT</code>, <code>chrM</code>, or <code>chrMT</code>)</td>
+<td align="right">1-16,569</td>
+</tr>
+<tr>
+<td>GRCh38</td>
+<td>mitochondrial (<code>M</code>, <code>MT</code>, <code>chrM</code>, or <code>chrMT</code>)</td>
+<td align="right">1-16,569</td>
+</tr>
+</tbody>
+</table>
+<p>The Y files are explicitly named <code>chrY_nonpar.*.gmap.gz</code>. The Y and mitochondrial files contain two anchors at <code>0</code> cM because GLIMPSE requires at least two map entries. The native conformance tests run small haploid BCF reference/target pairs through chunk, split-reference, phase, and ligate using <code>Y</code>, <code>chrY</code>, <code>M</code>, <code>MT</code>, <code>chrM</code>, and <code>chrMT</code>. This proves contig-label mechanics, not scientific calibration of Y or mitochondrial imputation.</p>
 </div>
 <div class="section level2">
 <h2 id="one-explicit-operation-at-a-time">One explicit operation at a time<a class="anchor" aria-label="anchor" href="#one-explicit-operation-at-a-time"></a>
@@ -130,7 +166,7 @@
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/rglimpse2_simd_info.html">rglimpse2_simd_info</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">scalar</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_executables.html">rglimpse2_executables</a></span><span class="op">(</span>phase_backend <span class="op">=</span> <span class="st">"scalar"</span><span class="op">)</span></span></code></pre></div>
-<p>The package’s native end-to-end test runs all four real GLIMPSE2 operations on a synthetic BCF fixture and requires byte-identical fixed-seed phase output from every runtime-supported backend.</p>
+<p>The native tests run all four packaged GLIMPSE2 programs against eight tiny <code>vcfppR</code>-generated and <code>Rduckhts</code>-indexed BCF reference/target pairs. They cover <code>1</code>/<code>chr1</code>, <code>Y</code>/<code>chrY</code>, and <code>M</code>/<code>MT</code>/<code>chrM</code>/<code>chrMT</code>, including haploid Y and mitochondrial targets, and require identical fixed-seed phase records from every runtime-supported backend. No executable test doubles are used.</p>
 </div>
 <div class="section level2">
 <h2 id="building-this-fork">Building this fork<a class="anchor" aria-label="anchor" href="#building-this-fork"></a>
