@@ -1,0 +1,11 @@
+Synthetic GLIMPSE2 conformance fixture
+
+reference.bcf contains 50 phased, biallelic chr1 SNVs for eight synthetic
+reference samples and includes AC/AN. target.bcf contains PL likelihoods at the
+same records for two synthetic target samples. Both BCF files have CSI indexes.
+map.txt is a two-point monotone genetic map.
+
+The records contain no human observations. They exercise the real packaged
+chunk, split-reference, phase, and ligate executables. The test also requires
+byte-identical phase output from every runtime-supported packaged SIMD backend
+for a fixed seed.

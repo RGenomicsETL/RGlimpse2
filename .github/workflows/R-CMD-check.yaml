@@ -1,0 +1,120 @@
+name: R-CMD-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  R-CMD-check:
+    name: ${{ matrix.config.id }}
+    runs-on: ${{ matrix.config.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {id: linux-x64-devel, os: ubuntu-latest, r: devel, http-user-agent: release}
+          - {id: linux-x64-release, os: ubuntu-latest, r: release}
+          - {id: linux-arm64-release, os: ubuntu-24.04-arm, r: release}
+          - {id: macos-arm64-release, os: macos-15, r: release}
+          - {id: macos-x64-release, os: macos-15-intel, r: release}
+          - {id: windows-x64-release, os: windows-latest, r: release, rtools: '45'}
+          - {id: windows-arm64-release, os: windows-11-arm, r: release, rtools: '45'}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      R_PROFILE_USER: ${{ github.workspace }}/.github/Rprofile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux native dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libboost-iostreams-dev \
+            libboost-program-options-dev \
+            libboost-serialization-dev \
+            libbz2-dev \
+            libcurl4-openssl-dev \
+            libdeflate-dev \
+            liblzma-dev \
+            libssl-dev \
+            zlib1g-dev
+
+      - name: Install macOS native dependencies
+        if: runner.os == 'macOS'
+        run: brew install boost
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          rtools-version: ${{ matrix.config.rtools }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: RGlimpse2
+          extra-packages: any::rcmdcheck
+          needs: check
+          install-pandoc: false
+
+      - name: Rebuild Rduckhts for the macOS x64 runtime
+        if: matrix.config.id == 'macos-x64-release'
+        shell: Rscript {0}
+        run: |
+          install.packages(
+            "Rduckhts",
+            repos = "https://rgenomicsetl.r-universe.dev",
+            type = "source"
+          )
+
+      - name: Validate the Rduckhts htslib contract
+        shell: Rscript {0}
+        run: |
+          config <- Rduckhts::rduckhts_htslib_config(validate = TRUE)
+          print(config[c("build_id", "htslib_version", "link", "library_file")])
+
+      - name: Audit pinned upstream patches and source archive
+        if: matrix.config.id == 'linux-x64-release'
+        run: |
+          patches/check.sh
+          Rscript RGlimpse2/tools/check-source-archive.R
+
+      - name: Show Windows toolchain and Boost contract
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -eu
+          R CMD config MAKE
+          R CMD config CXX17
+          R CMD config CXX17STD || true
+          R CMD config CXX17FLAGS
+          R CMD config LOCAL_SOFT
+          local_soft=$(R CMD config LOCAL_SOFT)
+          find "$local_soft/lib" -maxdepth 1 \
+            -name 'libboost_*-mt-*.a' -print | sort
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          working-directory: RGlimpse2
+          args: 'c("--no-manual", "--as-cran")'
+          build_args: '"--no-manual"'
+          error-on: '"warning"'
+          upload-results: always
+
+      - name: Audit staged phase assembly
+        if: matrix.config.id == 'linux-x64-release'
+        run: |
+          RGlimpse2/tools/check-phase-assembly.sh \
+            "$(realpath RGlimpse2/check/RGlimpse2/glimpse2/bin)" \
+            /usr/bin/objdump

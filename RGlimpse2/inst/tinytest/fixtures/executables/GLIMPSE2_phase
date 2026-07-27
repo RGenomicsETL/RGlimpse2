@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+
+reference=
+output=
+log=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --reference)
+      reference=$2
+      shift 2
+      ;;
+    --output)
+      output=$2
+      shift 2
+      ;;
+    --log)
+      log=$2
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+test -n "$reference"
+test -n "$output"
+printf 'phased:%s\n' "$(basename "$reference")" > "$output"
+if [ -n "$log" ]; then
+  printf 'phase fixture\n' > "$log"
+fi

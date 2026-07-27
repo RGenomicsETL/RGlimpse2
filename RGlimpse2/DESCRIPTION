@@ -1,0 +1,72 @@
+Package: RGlimpse2
+Title: Explicit R Interface to Packaged GLIMPSE2 Executables
+Version: 0.0.0.9000
+Authors@R: c(
+    person(
+      given = c("Sounkou", "Mahamane"),
+      family = "Toure",
+      email = "sounkoutoure@gmail.com",
+      role = c("aut", "cre")
+    ),
+    person(
+      given = "Simone",
+      family = "Rubinacci",
+      role = c("ctb", "cph"),
+      comment = "GLIMPSE2 upstream implementation"
+    ),
+    person(
+      given = "Olivier",
+      family = "Delaneau",
+      role = c("ctb", "cph"),
+      comment = "GLIMPSE2 upstream implementation"
+    ),
+    person(
+      given = "Evan",
+      family = "Nemerson",
+      role = "cph",
+      comment = "SIMDe copyright holder"
+    )
+  )
+Description: Builds the pinned in-tree 'GLIMPSE2' chromosome chunking,
+    reference splitting, phasing and imputation, and ligation programs against
+    the 'htslib' supplied by 'Rduckhts'. Stateless R functions invoke one
+    packaged executable with explicit argument vectors and return typed results
+    or typed operational errors. The phasing executable is selected explicitly
+    from portable and runtime-supported AVX2, AVX-512, or NEON builds without
+    searching 'PATH'.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Language: en-US
+Depends:
+    R (>= 4.4.0)
+Imports:
+    processx (>= 3.8.0),
+    Rduckhts (>= 1.5.1-0.1.1),
+    S7 (>= 0.2.2)
+Suggests:
+    knitr,
+    rmarkdown,
+    tinytest
+VignetteBuilder: knitr
+SystemRequirements: GNU make, a C++17 compiler, Boost iostreams,
+    program_options and serialization libraries, zlib, libbz2, liblzma,
+    libcurl, OpenSSL and libdeflate
+Additional_repositories: https://rgenomicsetl.r-universe.dev
+URL: https://github.com/RGenomicsETL/RGlimpse2,
+    https://rgenomicsetl.github.io/RGlimpse2/
+BugReports: https://github.com/RGenomicsETL/RGlimpse2/issues
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.0.0
+Config/Needs/website: pkgdown
+Collate:
+    'validation.R'
+    'conditions.R'
+    'results.R'
+    'simd.R'
+    'executables.R'
+    'process.R'
+    'chunk.R'
+    'split-reference.R'
+    'phase.R'
+    'ligate.R'
+    'RGlimpse2-package.R'

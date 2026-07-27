@@ -1,0 +1,35 @@
+url: https://rgenomicsetl.github.io/RGlimpse2/
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
+
+articles:
+  - title: Getting started
+    navbar: ~
+    contents:
+      - getting-started
+
+reference:
+  - title: Executable discovery and dispatch
+    contents:
+      - rglimpse2_executables
+      - rglimpse2_simd_info
+      - RGlimpse2Executables
+      - RGlimpse2SimdInfo
+  - title: GLIMPSE2 operations
+    contents:
+      - rglimpse2_chunk
+      - rglimpse2_split_reference
+      - rglimpse2_phase
+      - rglimpse2_ligate
+  - title: Results and errors
+    contents:
+      - RGlimpse2RunResult
+      - RGlimpse2ErrorValue
+      - rglimpse2_error_value
+      - rglimpse2_is_error
+      - rglimpse2_contract_violation
