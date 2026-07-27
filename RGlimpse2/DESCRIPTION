@@ -1,5 +1,5 @@
 Package: RGlimpse2
-Title: Explicit R Interface to Packaged GLIMPSE2 Executables
+Title: An 'R' Wrapper of 'GLIMPSE2' for Low-Pass Sequencing Inference
 Version: 0.0.0.9000
 Authors@R: c(
     person(

@@ -1,4 +1,4 @@
-#' RGlimpse2: explicit process-isolated GLIMPSE2 operations
+#' RGlimpse2: an R wrapper of GLIMPSE2 for low-pass sequencing inference
 #'
 #' RGlimpse2 packages a pinned GLIMPSE2 fork and exposes one stateless wrapper
 #' per native executable. Contract violations are typed conditions; expected
