@@ -18,12 +18,12 @@
 Source:
 [`DESCRIPTION`](https://github.com/RGenomicsETL/RGlimpse2/blob/main/DESCRIPTION)
 
-Toure SM (2026). *RGlimpse2: Explicit R Interface to Packaged GLIMPSE2
-Executables*. R package version 0.0.0.9000,
+Toure SM (2026). *RGlimpse2: An 'R' Wrapper of 'GLIMPSE2' for Low-Pass
+Sequencing Inference*. R package version 0.0.0.9000,
 <https://github.com/RGenomicsETL/RGlimpse2>.
 
     @Manual{,
-      title = {RGlimpse2: Explicit R Interface to Packaged GLIMPSE2 Executables},
+      title = {RGlimpse2: An 'R' Wrapper of 'GLIMPSE2' for Low-Pass Sequencing Inference},
       author = {Sounkou Mahamane Toure},
       year = {2026},
       note = {R package version 0.0.0.9000},

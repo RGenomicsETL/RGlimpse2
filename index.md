@@ -4,8 +4,8 @@
 [![pkgdown](https://github.com/RGenomicsETL/RGlimpse2/actions/workflows/pkgdown.yaml/badge.svg)](https://rgenomicsetl.github.io/RGlimpse2/)
 [![R-universe](https://RGenomicsETL.r-universe.dev/RGlimpse2/badges/version)](https://RGenomicsETL.r-universe.dev/RGlimpse2)
 
-`RGlimpse2` is the R package in the RGenomicsETL GLIMPSE2 fork. It
-builds and installs the pinned `GLIMPSE2_chunk`,
+`RGlimpse2` is an R wrapper of GLIMPSE2 for low-pass sequencing
+inference. It builds and installs the pinned `GLIMPSE2_chunk`,
 `GLIMPSE2_split_reference`, `GLIMPSE2_phase`, and `GLIMPSE2_ligate`
 programs, then invokes one child executable per operation through direct
 `processx` argument vectors.
