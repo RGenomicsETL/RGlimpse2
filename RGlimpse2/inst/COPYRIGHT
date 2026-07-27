@@ -3,8 +3,8 @@ RGlimpse2 package interface
 
 Copyright (C) 2026 Sounkou Mahamane Toure
 
-The RGlimpse2 R interface is distributed under the MIT licence stated in the
-package LICENSE file.
+The RGlimpse2 R interface is distributed under the GNU General Public License
+version 2 or later.
 
 GLIMPSE2 native programs
 ========================

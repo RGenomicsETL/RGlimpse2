@@ -1,5 +1,8 @@
 # RGlimpse2 0.0.0.9000
 
+- The R package interface is now distributed under GPL-2 or later; bundled
+  upstream components retain their original licences and notices.
+
 - Add a nested R package that builds pinned GLIMPSE2 chunk, split-reference,
   phase, and ligate executables against the validated htslib contract supplied
   by `Rduckhts`.
