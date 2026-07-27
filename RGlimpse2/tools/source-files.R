@@ -7,6 +7,15 @@ rglimpse2_source_files <- function(repo_root) {
     "ligate/src",
     "third_party/simde/simde"
   )
+  missing_directories <- source_directories[
+    !dir.exists(file.path(repo_root, source_directories))
+  ]
+  if (length(missing_directories)) {
+    stop(
+      "required source directories are missing; initialize submodules: ",
+      paste(missing_directories, collapse = ", ")
+    )
+  }
   directory_files <- unlist(lapply(
     source_directories,
     function(path) {
