@@ -1,0 +1,8 @@
+{
+  "schema": "rglimpse2.upstream-pin.v1",
+  "repository": "https://github.com/odelaneau/GLIMPSE.git",
+  "branch": "master",
+  "commit": "867113849925f3100bf8ff125e2b9eb1eff51b37",
+  "simde_commit": "71fd833d9666141edcd1d3c109a80e228303d8d7",
+  "license": "MIT"
+}

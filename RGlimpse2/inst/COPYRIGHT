@@ -1,0 +1,33 @@
+RGlimpse2 package interface
+===========================
+
+Copyright (C) 2026 Sounkou Mahamane Toure
+
+The RGlimpse2 R interface is distributed under the MIT licence stated in the
+package LICENSE file.
+
+GLIMPSE2 native programs
+========================
+
+Copyright (C) 2022-2023 Simone Rubinacci
+Copyright (C) 2022-2023 Olivier Delaneau
+
+The native source archive built by this package is generated from the pinned
+GLIMPSE2 source tree in this repository. Its source files and included LICENSE
+retain the upstream MIT notices. Cite the original GLIMPSE and GLIMPSE2 methods
+when using these programs for scientific work.
+
+SIMDe headers
+=============
+
+SIMDe is copyright Evan Nemerson and contributors. The pinned SIMDe headers
+from the GLIMPSE2 upstream submodule are included in RGlimpse2's generated
+native-source archive and remain under SIMDe's MIT licence. RGlimpse2 does not
+load a SIMDe runtime library.
+
+htslib
+======
+
+RGlimpse2 does not vendor htslib. It compiles and links the child executables
+against the exact installed htslib contract exposed by Rduckhts. See Rduckhts
+and htslib for their respective copyright and licence notices.

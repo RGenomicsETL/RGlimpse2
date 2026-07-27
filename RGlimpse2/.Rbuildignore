@@ -1,0 +1,12 @@
+^bootstrap\.R$
+^Makefile$
+^README\.Rmd$
+^_pkgdown\.yml$
+^cran-comments\.md$
+^docs$
+^tools/check-phase-assembly\.sh$
+^tools/check-source-archive\.R$
+^tools/source-files\.R$
+^tools/glimpse2-build$
+^.*\.Rproj$
+^\.Rproj\.user$

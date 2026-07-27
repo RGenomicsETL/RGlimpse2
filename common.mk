@@ -7,7 +7,7 @@ dummy_build_folder_bin := $(shell mkdir -p bin)
 dummy_build_folder_obj := $(shell mkdir -p obj)
 
 #COMPILER & LINKER FLAGS
-CXXFLAG=-std=c++17 -O3 -Wno-ignored-attributes -I../third_party/simde
+CXXFLAG=-std=c++17 -O3 -Wno-ignored-attributes
 LDFLAG=-O3
 
 #CXXFLAG=-O0 -g -Wno-ignored-attributes
@@ -16,14 +16,22 @@ LDFLAG=-O3
 #DYNAMIC LIBRARIES
 DYN_LIBS=-lz -lpthread -lbz2 -llzma -lcurl -lcrypto -ldeflate
 
+# Downstream package builds can provide complete compiler flags without
+# triggering the system htslib discovery used by the upstream `system` target.
+# The defaults preserve all existing upstream build targets.
+HTSLIB_CPPFLAGS ?= -I$(HTSLIB_INC)
+BOOST_CPPFLAGS ?= -I$(BOOST_INC)
+SIMDE_CPPFLAGS ?= -I../third_party/simde
+
 HFILE=$(shell find src -name *.h)
 CFILE=$(shell find src -name *.cpp)
 OFILE=$(shell for file in `find src -name *.cpp`; do echo obj/$$(basename $$file .cpp).o; done)
 VPATH=$(shell for file in `find src -name *.cpp`; do echo $$(dirname $$file); done)
 
 NAME=$(shell basename $(CURDIR))
-BFILE=bin/GLIMPSE2_$(NAME)
-EXEFILE=bin/GLIMPSE2_$(NAME)_static
+EXEEXT ?=
+BFILE=bin/GLIMPSE2_$(NAME)$(EXEEXT)
+EXEFILE=bin/GLIMPSE2_$(NAME)_static$(EXEEXT)
 
 #COMMIT_VERS=$(shell git rev-parse --short HEAD)
 #COMMIT_DATE=$(shell git log -1 --format=%cd --date=short)
@@ -31,14 +39,15 @@ EXEFILE=bin/GLIMPSE2_$(NAME)_static
 #CXXFLAG+= -D__COMMIT_DATE__=\"$(COMMIT_DATE)\"
 
 ARCH := $(shell uname -m)
+PHASE_SIMD_FLAGS ?= -mavx2 -mfma
 ifeq ($(NAME),phase)
   ifneq (,$(filter x86_64 amd64,$(ARCH)))
-    CXXFLAG+=-mavx2 -mfma
+    CXXFLAG += $(PHASE_SIMD_FLAGS)
   endif
 endif
 
-COMMIT_VERS=3bed6d9
-COMMIT_DATE=2023-04-24
+COMMIT_VERS=8671138
+COMMIT_DATE=2026-07-20
 ifneq ($(MAKECMDGOALS),clean)
  ifneq (, $(shell which git))
   COMMIT_VERS_GIT=$(shell git rev-parse --short HEAD 2>/dev/null)
@@ -219,7 +228,7 @@ $(EXEFILE): $(OFILE)
 	$(CXX) $(LDFLAG) -static -static-libgcc -static-libstdc++ -pthread -o $(EXEFILE) $^ $(HTSLIB_LIB) $(BOOST_LIB_IO) $(BOOST_LIB_PO) $(BOOST_LIB_SE) -Wl,-Bstatic $(DYN_LIBS)
 
 obj/%.o: %.cpp $(HFILE)
-	$(CXX) $(CXXFLAG) -c $< -o $@ -Isrc -I$(HTSLIB_INC) -I$(BOOST_INC)
+	$(CXX) $(CXXFLAG) -c $< -o $@ -Isrc $(HTSLIB_CPPFLAGS) $(BOOST_CPPFLAGS) $(SIMDE_CPPFLAGS)
 
 clean:
 	rm -f obj/*.o $(BFILE)

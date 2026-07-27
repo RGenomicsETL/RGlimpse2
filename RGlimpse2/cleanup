@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+rm -rf tools/glimpse2-build
+rm -f inst/glimpse2/htslib-version
+rm -f \
+  inst/glimpse2/bin/GLIMPSE2_chunk \
+  inst/glimpse2/bin/GLIMPSE2_chunk.exe \
+  inst/glimpse2/bin/GLIMPSE2_split_reference \
+  inst/glimpse2/bin/GLIMPSE2_split_reference.exe \
+  inst/glimpse2/bin/GLIMPSE2_phase \
+  inst/glimpse2/bin/GLIMPSE2_phase.exe \
+  inst/glimpse2/bin/GLIMPSE2_phase_avx2 \
+  inst/glimpse2/bin/GLIMPSE2_phase_avx2.exe \
+  inst/glimpse2/bin/GLIMPSE2_phase_avx512 \
+  inst/glimpse2/bin/GLIMPSE2_phase_avx512.exe \
+  inst/glimpse2/bin/GLIMPSE2_phase_neon \
+  inst/glimpse2/bin/GLIMPSE2_phase_neon.exe \
+  inst/glimpse2/bin/GLIMPSE2_ligate \
+  inst/glimpse2/bin/GLIMPSE2_ligate.exe
+
+exit 0

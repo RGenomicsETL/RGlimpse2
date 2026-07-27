@@ -1,0 +1,6 @@
+local({
+  repos <- getOption("repos")
+  repos["RGenomicsETL"] <- "https://rgenomicsetl.r-universe.dev"
+  repos["CRAN"] <- "https://cloud.r-project.org"
+  options(repos = repos)
+})

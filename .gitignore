@@ -88,6 +88,8 @@ dkms.conf
 # Genetics files
 *.vcf.gz*
 *.bcf*
+!RGlimpse2/inst/tinytest/fixtures/data/*.bcf
+!RGlimpse2/inst/tinytest/fixtures/data/*.bcf.csi
 *_coverage.txt.gz
 
 docs/.jekyll-cache/
@@ -105,3 +107,13 @@ tutorial/GLIMPSE_concordance/
 tutorial/bin/
 
 3rd_party/
+
+!RGlimpse2/inst/glimpse2/bin/
+RGlimpse2/inst/glimpse2/bin/*
+!RGlimpse2/inst/glimpse2/bin/README
+
+/RGlimpse2.Rcheck/
+/RGlimpse2_*.tar.gz
+/RGlimpse2/docs/
+/RGlimpse2/*.Rcheck/
+/RGlimpse2/RGlimpse2_*.tar.gz

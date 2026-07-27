@@ -11,6 +11,16 @@
 [![Docker hub](https://img.shields.io/docker/pulls/simrub/glimpse)](https://hub.docker.com/r/simrub/glimpse/)
 [![GitHub Releases](https://img.shields.io/github/v/release/odelaneau/GLIMPSE)](https://github.com/odelaneau/GLIMPSE/releases)
 
+### RGlimpse2 fork
+
+This repository preserves the upstream GLIMPSE2 source tree and adds a nested
+[`RGlimpse2/`](RGlimpse2/) R package. The package builds the pinned in-tree
+executables against the single htslib supplied by `Rduckhts` and performs
+runtime selection among scalar, AVX2, AVX-512, or NEON phase binaries. See the
+[RGlimpse2 package documentation](https://rgenomicsetl.github.io/RGlimpse2/)
+for the R API and installation contract. Downstream native changes are recorded
+in the audited [`patches/`](patches/) series; concise future targets live in
+[`dev-notes/`](dev-notes/). The original GLIMPSE2 documentation follows below.
 
 ### Versions
 

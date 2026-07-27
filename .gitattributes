@@ -1,0 +1,8 @@
+*.R text eol=lf
+*.Rmd text eol=lf
+*.sh text eol=lf
+RGlimpse2/configure text eol=lf
+RGlimpse2/configure.win text eol=lf
+RGlimpse2/cleanup text eol=lf
+RGlimpse2/cleanup.win text eol=lf
+patches/*.patch text eol=lf -whitespace
