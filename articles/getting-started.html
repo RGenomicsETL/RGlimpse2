@@ -82,28 +82,43 @@ names, intervals, seeds, and resource values. Calls do not search
 <span><span class="op">}</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="select-an-installed-genetic-map">Select an installed genetic map<a class="anchor" aria-label="anchor" href="#select-an-installed-genetic-map"></a>
+</h2>
+<p>The package includes GRCh37 and GRCh38 maps for chromosomes 1-22, X
+non-PAR, X PAR1, and X PAR2. It also includes explicitly labelled
+two-anchor, zero-recombination coordinate maps for Y non-PAR and
+mitochondrial sequence. Those derived files satisfy the GLIMPSE map
+format; they are not empirical maps or validation of Y or mitochondrial
+imputation.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">genetic_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"22"</span><span class="op">)</span></span>
+<span><span class="va">y_nonpar_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"Y"</span><span class="op">)</span></span>
+<span><span class="va">mitochondrial_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"MT"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_maps</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
 <h2 id="chunk-and-split-the-reference">Chunk and split the reference<a class="anchor" aria-label="anchor" href="#chunk-and-split-the-reference"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chunk_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_chunk.html">rglimpse2_chunk</a></span><span class="op">(</span></span>
 <span>  input_sites <span class="op">=</span> <span class="st">"/data/reference.sites.bcf"</span>,</span>
 <span>  region <span class="op">=</span> <span class="st">"chr22"</span>,</span>
 <span>  output_chunks <span class="op">=</span> <span class="st">"/work/chunks.chr22.txt"</span>,</span>
 <span>  executable <span class="op">=</span> <span class="va">executables</span><span class="op">@</span><span class="va">chunk</span>,</span>
-<span>  genetic_map <span class="op">=</span> <span class="st">"/data/chr22.b38.gmap.gz"</span>,</span>
+<span>  genetic_map <span class="op">=</span> <span class="va">genetic_map</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">101L</span>,</span>
 <span>  threads <span class="op">=</span> <span class="fl">2L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Each chunk table row supplies a buffered input region and contained
 output region for <code><a href="../reference/rglimpse2_split_reference.html">rglimpse2_split_reference()</a></code>:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">split_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_split_reference.html">rglimpse2_split_reference</a></span><span class="op">(</span></span>
 <span>  reference_bcf <span class="op">=</span> <span class="st">"/data/reference.bcf"</span>,</span>
 <span>  input_region <span class="op">=</span> <span class="st">"chr22:100000-600000"</span>,</span>
 <span>  output_region <span class="op">=</span> <span class="st">"chr22:150000-550000"</span>,</span>
 <span>  output_prefix <span class="op">=</span> <span class="st">"/work/reference"</span>,</span>
 <span>  executable <span class="op">=</span> <span class="va">executables</span><span class="op">@</span><span class="va">split_reference</span>,</span>
-<span>  genetic_map <span class="op">=</span> <span class="st">"/data/chr22.b38.gmap.gz"</span>,</span>
+<span>  genetic_map <span class="op">=</span> <span class="va">genetic_map</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">102L</span>,</span>
 <span>  threads <span class="op">=</span> <span class="fl">2L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -114,7 +129,7 @@ output region for <code><a href="../reference/rglimpse2_split_reference.html">rg
 <p>The current deterministic phase contract requires
 <code>threads = 1L</code>. Parallelize across independent chunks rather
 than inside a phase child:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">phase_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_phase.html">rglimpse2_phase</a></span><span class="op">(</span></span>
 <span>  input_gl <span class="op">=</span> <span class="st">"/data/sample.gl.bcf"</span>,</span>
 <span>  reference_bin <span class="op">=</span> <span class="va">split_result</span><span class="op">@</span><span class="va">outputs</span><span class="op">$</span><span class="va">reference_bin</span>,</span>
@@ -125,7 +140,7 @@ than inside a phase child:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p>After writing an ordered file containing one absolute phase-output
 path per line, ligate the chunks:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ligate_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_ligate.html">rglimpse2_ligate</a></span><span class="op">(</span></span>
 <span>  input_list <span class="op">=</span> <span class="st">"/work/phase-files.txt"</span>,</span>
 <span>  output_bcf <span class="op">=</span> <span class="st">"/work/phase.chr22.bcf"</span>,</span>
@@ -142,7 +157,7 @@ subclass. Contract violations signal an
 <div class="section level2">
 <h2 id="simd-selection">SIMD selection<a class="anchor" aria-label="anchor" href="#simd-selection"></a>
 </h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">info</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_simd_info.html">rglimpse2_simd_info</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">info</span><span class="op">@</span><span class="va">compiled_backends</span></span>
 <span><span class="va">info</span><span class="op">@</span><span class="va">cpu_supported_backends</span></span>

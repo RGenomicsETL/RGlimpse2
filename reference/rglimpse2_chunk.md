@@ -46,7 +46,8 @@ rglimpse2_chunk(
 
 - genetic_map:
 
-  Absolute genetic-map path.
+  Absolute genetic-map path, such as one returned by
+  [`rglimpse2_genetic_map()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_genetic_maps.md).
 
 - seed:
 

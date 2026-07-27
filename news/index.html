@@ -39,6 +39,7 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="rglimpse2-0009000">RGlimpse2 0.0.0.9000<a class="anchor" aria-label="anchor" href="#rglimpse2-0009000"></a></h2>
 <ul><li>Add a nested R package that builds pinned GLIMPSE2 chunk, split-reference, phase, and ligate executables against the validated htslib contract supplied by <code>Rduckhts</code>.</li>
+<li>Bundle the pinned GRCh37 and GRCh38 autosomal and chromosome X genetic maps, plus explicit zero-recombination coordinate maps for Y non-PAR and mitochondrial sequence, with audited lookup helpers and provenance.</li>
 <li>Add stateless wrappers with explicit paths, arguments, seeds, and resources; typed S7 results and operational errors; and typed contract conditions. Split-reference coordinates are canonicalized before output prediction, output paths must be distinct, and ligate lists are validated exactly as the native reader consumes them. Child executables are launched directly with <code>processx</code> argument vectors without an intermediate shell command.</li>
 <li>Build scalar and architecture-specific phase executables and select only runtime-supported AVX2, AVX-512F/BW/VL, or NEON backends.</li>
 <li>Add Unix and Rtools <code>configure</code> paths, pinned SIMDe headers, source-archive drift auditing, parallel native compilation using 2–8 detected make jobs, real executable help/linkage tests, and a synthetic native end-to-end conformance test across all supported SIMD backends.</li>

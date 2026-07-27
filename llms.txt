@@ -30,6 +30,28 @@ Source installation requires GNU make, a C++17 compiler, and the Boost
 ships these requirements for Windows. Linux distributions and Homebrew
 provide them as ordinary development packages.
 
+## Packaged genetic maps
+
+GRCh37 and GRCh38 autosomal, X non-PAR, X PAR1, and X PAR2 maps are
+installed with the package. Minimal zero-recombination coordinate maps
+are also provided for Y non-PAR and mitochondrial sequence:
+
+``` r
+
+library(RGlimpse2)
+
+rglimpse2_genetic_map("GRCh38", "22")
+rglimpse2_genetic_map("GRCh38", "X", region = "par1")
+rglimpse2_genetic_map("GRCh38", "Y")
+rglimpse2_genetic_map("GRCh38", "MT")
+head(rglimpse2_genetic_maps())
+```
+
+The Y and mitochondrial files contain two anchors at `0` cM because
+GLIMPSE requires at least two map entries. They are not empirical
+recombination maps or claims that Y or mitochondrial imputation is
+validated.
+
 ## One explicit operation at a time
 
 Resolve the installed executables and run an operation with explicit
@@ -44,12 +66,14 @@ if (rglimpse2_is_error(executables)) {
   stop(executables@message)
 }
 
+genetic_map <- rglimpse2_genetic_map("GRCh38", "22")
+
 chunks <- rglimpse2_chunk(
   input_sites = "/data/reference.sites.bcf",
   region = "chr22",
   output_chunks = "/work/chunks.chr22.txt",
   executable = executables@chunk,
-  genetic_map = "/data/chr22.b38.gmap.gz",
+  genetic_map = genetic_map,
   seed = 20260727L,
   threads = 2L
 )
@@ -123,6 +147,12 @@ calibrated and validated decoder.
   : Explicit GLIMPSE2 child executables
 - [`RGlimpse2SimdInfo()`](https://rgenomicsetl.github.io/RGlimpse2/reference/RGlimpse2SimdInfo.md)
   : RGlimpse2 phasing-executable dispatch information
+
+## Reference assets
+
+- [`rglimpse2_genetic_maps()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_genetic_maps.md)
+  [`rglimpse2_genetic_map()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_genetic_maps.md)
+  : Resolve packaged GRCh37 or GRCh38 genetic maps
 
 ## GLIMPSE2 operations
 

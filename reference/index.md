@@ -11,6 +11,12 @@
 - [`RGlimpse2SimdInfo()`](https://rgenomicsetl.github.io/RGlimpse2/reference/RGlimpse2SimdInfo.md)
   : RGlimpse2 phasing-executable dispatch information
 
+## Reference assets
+
+- [`rglimpse2_genetic_maps()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_genetic_maps.md)
+  [`rglimpse2_genetic_map()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_genetic_maps.md)
+  : Resolve packaged GRCh37 or GRCh38 genetic maps
+
 ## GLIMPSE2 operations
 
 - [`rglimpse2_chunk()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_chunk.md)

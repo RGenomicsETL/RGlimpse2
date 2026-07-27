@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Explicit R Interface to Packaged GLIMPSE2 Executables">
-<meta name="description" content="Builds the pinned in-tree GLIMPSE2 chromosome chunking, reference splitting, phasing and imputation, and ligation programs against the htslib supplied by Rduckhts. Stateless R functions invoke one packaged executable with explicit argument vectors and return typed results or typed operational errors. The phasing executable is selected explicitly from portable and runtime-supported AVX2, AVX-512, or NEON builds without searching PATH.">
-<meta property="og:description" content="Builds the pinned in-tree GLIMPSE2 chromosome chunking, reference splitting, phasing and imputation, and ligation programs against the htslib supplied by Rduckhts. Stateless R functions invoke one packaged executable with explicit argument vectors and return typed results or typed operational errors. The phasing executable is selected explicitly from portable and runtime-supported AVX2, AVX-512, or NEON builds without searching PATH.">
+<meta name="description" content="Builds the pinned in-tree GLIMPSE2 chromosome chunking, reference splitting, phasing and imputation, and ligation programs against the htslib supplied by Rduckhts. Stateless R functions invoke one packaged executable with explicit argument vectors and return typed results or typed operational errors. Pinned GRCh37 and GRCh38 genetic maps are installed for explicit offline lookup. The phasing executable is selected explicitly from portable and runtime-supported AVX2, AVX-512, or NEON builds without searching PATH.">
+<meta property="og:description" content="Builds the pinned in-tree GLIMPSE2 chromosome chunking, reference splitting, phasing and imputation, and ligation programs against the htslib supplied by Rduckhts. Stateless R functions invoke one packaged executable with explicit argument vectors and return typed results or typed operational errors. Pinned GRCh37 and GRCh38 genetic maps are installed for explicit offline lookup. The phasing executable is selected explicitly from portable and runtime-supported AVX2, AVX-512, or NEON builds without searching PATH.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -72,10 +72,24 @@
 <p>Source installation requires GNU make, a C++17 compiler, and the Boost <code>iostreams</code>, <code>program_options</code>, and <code>serialization</code> libraries. Rtools45 ships these requirements for Windows. Linux distributions and Homebrew provide them as ordinary development packages.</p>
 </div>
 <div class="section level2">
+<h2 id="packaged-genetic-maps">Packaged genetic maps<a class="anchor" aria-label="anchor" href="#packaged-genetic-maps"></a>
+</h2>
+<p>GRCh37 and GRCh38 autosomal, X non-PAR, X PAR1, and X PAR2 maps are installed with the package. Minimal zero-recombination coordinate maps are also provided for Y non-PAR and mitochondrial sequence:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/RGenomicsETL/RGlimpse2" class="external-link">RGlimpse2</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"22"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"X"</span>, region <span class="op">=</span> <span class="st">"par1"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"Y"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"MT"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_maps</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>The Y and mitochondrial files contain two anchors at <code>0</code> cM because GLIMPSE requires at least two map entries. They are not empirical recombination maps or claims that Y or mitochondrial imputation is validated.</p>
+</div>
+<div class="section level2">
 <h2 id="one-explicit-operation-at-a-time">One explicit operation at a time<a class="anchor" aria-label="anchor" href="#one-explicit-operation-at-a-time"></a>
 </h2>
 <p>Resolve the installed executables and run an operation with explicit inputs, outputs, interval, seed, and resources:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/RGenomicsETL/RGlimpse2" class="external-link">RGlimpse2</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">executables</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_executables.html">rglimpse2_executables</a></span><span class="op">(</span>phase_backend <span class="op">=</span> <span class="st">"auto"</span><span class="op">)</span></span>
@@ -83,12 +97,14 @@
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="va">executables</span><span class="op">@</span><span class="va">message</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
+<span><span class="va">genetic_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_map</a></span><span class="op">(</span><span class="st">"GRCh38"</span>, <span class="st">"22"</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">chunks</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_chunk.html">rglimpse2_chunk</a></span><span class="op">(</span></span>
 <span>  input_sites <span class="op">=</span> <span class="st">"/data/reference.sites.bcf"</span>,</span>
 <span>  region <span class="op">=</span> <span class="st">"chr22"</span>,</span>
 <span>  output_chunks <span class="op">=</span> <span class="st">"/work/chunks.chr22.txt"</span>,</span>
 <span>  executable <span class="op">=</span> <span class="va">executables</span><span class="op">@</span><span class="va">chunk</span>,</span>
-<span>  genetic_map <span class="op">=</span> <span class="st">"/data/chr22.b38.gmap.gz"</span>,</span>
+<span>  genetic_map <span class="op">=</span> <span class="va">genetic_map</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">20260727L</span>,</span>
 <span>  threads <span class="op">=</span> <span class="fl">2L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -98,7 +114,7 @@
 <h2 id="one-htslib-authority">One htslib authority<a class="anchor" aria-label="anchor" href="#one-htslib-authority"></a>
 </h2>
 <p>The package does not vendor or discover another htslib. During configuration it requires:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">Rduckhts</span><span class="fu">::</span><span class="fu"><a href="https://rgenomicsetl.r-universe.dev/Rduckhts/reference/rduckhts_htslib_config.html" class="external-link">rduckhts_htslib_config</a></span><span class="op">(</span>validate <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>Every executable is built with the returned headers and exact library contract. Runtime executable discovery revalidates the packaged build version against the htslib version supplied and loaded by <code>Rduckhts</code>.</p>
 </div>
@@ -111,7 +127,7 @@
 <li>ARM: scalar SIMDe and NEON.</li>
 </ul>
 <p>A baseline C probe checks CPU features and operating-system vector state before <code>"auto"</code> selects a binary. Explicit backend selection supports conformance and reproducibility testing without process-global dispatch state.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/rglimpse2_simd_info.html">rglimpse2_simd_info</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">scalar</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_executables.html">rglimpse2_executables</a></span><span class="op">(</span>phase_backend <span class="op">=</span> <span class="st">"scalar"</span><span class="op">)</span></span></code></pre></div>
 <p>The package’s native end-to-end test runs all four real GLIMPSE2 operations on a synthetic BCF fixture and requires byte-identical fixed-seed phase output from every runtime-supported backend.</p>
@@ -120,8 +136,8 @@
 <h2 id="building-this-fork">Building this fork<a class="anchor" aria-label="anchor" href="#building-this-fork"></a>
 </h2>
 <p>The upstream GLIMPSE2 tree remains the repository root. The R package is nested under <code>RGlimpse2/</code>:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">make</span> r-package-bootstrap</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">make</span> r-package-check</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">make</span> r-package-bootstrap</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">make</span> r-package-check</span></code></pre></div>
 <p>Reference-panel copying evidence is an inference diagnostic. <code>RGlimpse2</code> does not call it local ancestry; that claim requires a separately calibrated and validated decoder.</p>
 </div>
 </div>

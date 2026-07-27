@@ -11,8 +11,9 @@ overwrite outputs.
 The package links GLIMPSE2 only to the htslib contract supplied and
 validated by `Rduckhts`. Scalar, AVX2, AVX-512, and NEON phase
 executables are separate child-process artifacts selected explicitly at
-runtime. No ancestry decoder or workflow state is embedded in this
-package.
+runtime. Pinned GRCh37 and GRCh38 genetic maps are available through
+explicit lookup functions. No ancestry decoder or workflow state is
+embedded in this package.
 
 ## See also
 
