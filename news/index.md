@@ -19,5 +19,5 @@
   detected make jobs, real executable help/linkage tests, and a
   synthetic native end-to-end conformance test across all supported SIMD
   backends.
-- Add pkgdown configuration, package-development targets, and GitHub
-  Actions checks for Linux, macOS, and Windows on x86_64 and ARM64.
+- Add pkgdown configuration, package-development targets, release checks
+  for Linux, macOS, and Windows, and Linux R-devel coverage.
