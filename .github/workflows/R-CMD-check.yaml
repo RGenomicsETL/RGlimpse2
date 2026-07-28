@@ -55,19 +55,11 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: RGlimpse2
-          extra-packages: any::rcmdcheck
+          extra-packages: >-
+            github::RGenomicsETL/duckhts/r/Rduckhts@94b6bb85649a8b5aab9c5326801a3cb909329303,
+            any::rcmdcheck
           needs: check
           install-pandoc: false
-
-      - name: Rebuild Rduckhts for the macOS x64 runtime
-        if: matrix.config.id == 'macos-x64-release'
-        shell: Rscript {0}
-        run: |
-          install.packages(
-            "Rduckhts",
-            repos = "https://rgenomicsetl.r-universe.dev",
-            type = "source"
-          )
 
       - name: Validate the Rduckhts htslib contract
         shell: Rscript {0}
