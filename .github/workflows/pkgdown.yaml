@@ -29,9 +29,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libboost-iostreams-dev \
-            libboost-program-options-dev \
-            libboost-serialization-dev \
             libbz2-dev \
             libcurl4-openssl-dev \
             libdeflate-dev \
@@ -48,7 +45,10 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: RGlimpse2
-          extra-packages: any::pkgdown, local::.
+          extra-packages: >-
+            github::RGenomicsETL/duckhts/r/Rduckhts@94b6bb85649a8b5aab9c5326801a3cb909329303,
+            any::pkgdown,
+            local::.
           needs: website
           install-pandoc: false
 
