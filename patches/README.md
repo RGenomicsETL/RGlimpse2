@@ -13,9 +13,13 @@ The patches in [`series`](series) are applied in order:
 3. portable reference-environment setup on Windows;
 4. safe PBWT grouping for zero-span Y non-PAR and mitochondrial maps;
 5. flat direct-alignment likelihoods for symbolic and other non-observable
-   biallelic reference variants; and
+   decomposed single-ALT reference records; and
 6. genotype-stride-aware overlap processing for cohorts whose ligated chunks
    contain only haploid samples.
+
+`Single-ALT` describes the representation consumed by GLIMPSE2. A multiallelic
+source site must be decomposed into one record per ALT before reference splitting;
+the wrapper does not select one ALT and discard the others.
 
 The fifth patch keeps those variants in the haplotype scaffold while preventing
 read bases from being interpreted as likelihoods for an allele that the
