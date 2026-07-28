@@ -1,18 +1,38 @@
 diff --git a/phase/src/io/genotype_bam_caller.cpp b/phase/src/io/genotype_bam_caller.cpp
-index 2122683..3476adf 100644
+index 2122683..fe55c01 100644
 --- a/phase/src/io/genotype_bam_caller.cpp
 +++ b/phase/src/io/genotype_bam_caller.cpp
-@@ -255,11 +255,22 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
+@@ -27,6 +27,15 @@
+ #include <thread>
+ #include <chrono>
+ 
++static bool is_acgt_sequence(const std::string& allele)
++{
++	if (allele.empty()) return false;
++	for (const char base : allele)
++		if (base != 'A' && base != 'C' && base != 'G' && base != 'T')
++			return false;
++	return true;
++}
++
+ static int read_bam(void *data, bam1_t *b)
+ {
+ 	aux_t * aux = (aux_t*) data;
+@@ -255,11 +264,26 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
  		{
  
  			const variant * variant_site = V.vec_pos[i_site];
 +			const bool is_snp = variant_site->type == VCF_SNP;
  			const bool is_indel = variant_site->type == VCF_INDEL;
  			const bool is_delet = is_indel ? variant_site->alt.size() == 1 : 0;
++			const bool direct_likelihood =
++				(is_snp || is_indel) &&
++				is_acgt_sequence(variant_site->ref) &&
++				is_acgt_sequence(variant_site->alt);
  
 -			group_reads[is_indel + is_delet] (caller, variant_site);
 -			compute_llk[is_indel] (caller, variant_site);
-+			if (is_snp || is_indel)
++			if (direct_likelihood)
 +			{
 +				group_reads[is_indel + is_delet] (caller, variant_site);
 +				compute_llk[is_indel] (caller, variant_site);
@@ -27,12 +47,25 @@ index 2122683..3476adf 100644
  			if (caller.gls.dp_ind > 0)
  			{
  				int max_llk = 0;
-@@ -271,7 +282,7 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
+@@ -271,7 +295,7 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
  			++G.stats.depth_count[i][caller.gls.dp_ind];
  			G.stats.cov_ind[i].push(caller.gls.dp_ind);
  
 -			caller.snp_called = !is_indel;
-+			if (is_snp || is_indel) caller.snp_called = is_snp;
++			if (direct_likelihood) caller.snp_called = is_snp;
  			++i_site;
  		}
  	}
+diff --git a/phase/src/io/genotype_writer.cpp b/phase/src/io/genotype_writer.cpp
+index e772bee..5690995 100644
+--- a/phase/src/io/genotype_writer.cpp
++++ b/phase/src/io/genotype_writer.cpp
+@@ -73,7 +73,7 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
+ 	if (H.fploidy>0) bcf_hdr_append(hdr, "##INFO=<ID=INFO,Number=A,Type=Float,Description=\"IMPUTE info quality score for diploid samples\">");
+ 	bcf_hdr_append(hdr, "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Phased genotypes\">");
+ 	bcf_hdr_append(hdr, "##FORMAT=<ID=DS,Number=1,Type=Float,Description=\"Genotype dosage\">");
+-	bcf_hdr_append(hdr, "##FORMAT=<ID=GP,Number=3,Type=Float,Description=\"Genotype posteriors\">");
++	bcf_hdr_append(hdr, "##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype posterior probabilities\">");
+ 	bcf_hdr_append(hdr, std::string("##NMAIN="+stb.str(n_main)).c_str());
+ 	bcf_hdr_append(hdr, std::string("##FPLOIDY="+stb.str(H.fploidy)).c_str());
+ 

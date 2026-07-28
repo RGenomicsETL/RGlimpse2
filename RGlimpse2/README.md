@@ -51,7 +51,7 @@ head(rglimpse2_genetic_maps())
 ```
 
 | Assembly | Map                                           |          Coordinates |
-| -------- | --------------------------------------------- | -------------------: |
+|----------|-----------------------------------------------|---------------------:|
 | GRCh37   | Y non-PAR                                     | 2,649,521-59,034,049 |
 | GRCh38   | Y non-PAR                                     | 2,781,480-56,887,902 |
 | GRCh37   | mitochondrial (`M`, `MT`, `chrM`, or `chrMT`) |             1-16,569 |
@@ -164,8 +164,8 @@ version against the htslib version supplied and loaded by `Rduckhts`.
 
 `GLIMPSE2_phase` is built as complete, process-isolated executables:
 
-  - x86\_64: scalar SIMDe, AVX2, and AVX-512F/BW/VL;
-  - ARM: scalar SIMDe and NEON.
+- x86_64: scalar SIMDe, AVX2, and AVX-512F/BW/VL;
+- ARM: scalar SIMDe and NEON.
 
 A baseline C probe checks CPU features and operating-system vector state
 before `"auto"` selects a binary. Explicit backend selection supports

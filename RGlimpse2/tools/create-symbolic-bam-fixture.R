@@ -54,11 +54,18 @@ for (index in 0:49) {
     integer(1L)
   ))
   symbolic <- index == 24L
+  ambiguous_reference <- index == 25L
   writer$writeline(paste(
     "chr11",
     position,
-    if (symbolic) "symbolic" else paste0("v", index + 1L),
-    "A",
+    if (symbolic) {
+      "symbolic"
+    } else if (ambiguous_reference) {
+      "ambiguous-reference"
+    } else {
+      paste0("v", index + 1L)
+    },
+    if (ambiguous_reference) "N" else "A",
     if (symbolic) "<DEL>" else "C",
     ".",
     "PASS",
@@ -85,9 +92,10 @@ writeLines(
   useBytes = TRUE
 )
 
-write_alignment <- function(stem, symbolic_base) {
+write_alignment <- function(stem, symbolic_base, ambiguous_reference_base) {
   sequence <- rep("A", 100L)
   sequence[[50L]] <- symbolic_base
+  sequence[[60L]] <- ambiguous_reference_base
   sequence <- paste(sequence, collapse = "")
   sam <- file.path(output_root, paste0(stem, ".sam"))
   bam <- file.path(output_root, paste0(stem, ".bam"))
@@ -139,19 +147,20 @@ write_alignment <- function(stem, symbolic_base) {
   unlink(sam)
 }
 
-write_alignment("symbolic-ref-read", "A")
-write_alignment("symbolic-alt-read", "C")
+write_alignment("symbolic-ref-read", "A", "A")
+write_alignment("symbolic-alt-read", "C", "C")
 
 writeLines(
   c(
     "# Direct-BAM symbolic-reference conformance fixture",
     "",
     "This synthetic fixture contains 50 phased biallelic reference records.",
-    "Record `symbolic` has ALT `<DEL>` and is surrounded by ordinary SNPs.",
-    "The two indexed BAMs are identical except for their bases at the symbolic",
-    "record. A fixed-seed direct-BAM phase run must retain that record and return",
-    "the same imputed result from both BAMs because read likelihoods at",
-    "non-observable symbolic alleles are flat.",
+    "Record `symbolic` has ALT `<DEL>` and record `ambiguous-reference` has",
+    "REF `N`; both are surrounded by ordinary SNPs. The two indexed BAMs are",
+    "identical except for their bases at those two records. A fixed-seed",
+    "direct-BAM phase run must retain both records and return the same imputed",
+    "results from both BAMs because direct read likelihoods are flat when an",
+    "allele is not an observable A, C, G, or T sequence.",
     "",
     "Regenerate with:",
     "",

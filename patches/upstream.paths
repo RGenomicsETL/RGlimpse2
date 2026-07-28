@@ -5,6 +5,7 @@ makefile
 phase/src/caller/caller_initialise.cpp
 phase/src/containers/haplotype_set.cpp
 phase/src/io/genotype_bam_caller.cpp
+phase/src/io/genotype_writer.cpp
 phase/src/models/imputation_hmm.cpp
 phase/src/models/imputation_hmm.h
 phase/src/models/phasing_hmm.h

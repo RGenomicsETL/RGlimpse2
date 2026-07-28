@@ -110,4 +110,15 @@ local({
   expect_identical(length(ref_symbolic), 1L)
   expect_identical(length(alt_symbolic), 1L)
   expect_identical(ref_symbolic, alt_symbolic)
+  ref_ambiguous <- ref_records[grepl(
+    "^chr11\\t1250\\tambiguous-reference\\tN\\tC\\t",
+    ref_records
+  )]
+  alt_ambiguous <- alt_records[grepl(
+    "^chr11\\t1250\\tambiguous-reference\\tN\\tC\\t",
+    alt_records
+  )]
+  expect_identical(length(ref_ambiguous), 1L)
+  expect_identical(length(alt_ambiguous), 1L)
+  expect_identical(ref_ambiguous, alt_ambiguous)
 })

@@ -41,11 +41,13 @@ local({
       contigs <- c(contigs, reader$chr())
       records <- c(records, reader$line())
     }
+    header <- paste(reader$header(), collapse = "\n")
     list(
       count = count,
       contigs = unique(contigs),
       samples = reader$samples(),
-      records = records
+      records = records,
+      header = header
     )
   }
 
@@ -145,6 +147,10 @@ local({
     expect_true(observed$count > 0L, info = case$id)
     expect_identical(observed$contigs, case$contig, info = case$id)
     expect_identical(observed$samples, c("T1", "T2"), info = case$id)
+    expect_true(
+      grepl("##FORMAT=<ID=GP,Number=G,Type=Float", observed$header, fixed = TRUE),
+      info = case$id
+    )
     phase_records[[case$id]] <- observed$records
 
     input_list <- file.path(case_output, "ligate-input.txt")
@@ -169,6 +175,46 @@ local({
   # executable. The complete alias matrix above always runs the real scalar
   # executable.
   oracle_case <- cases[cases$id == "grch37_1", , drop = FALSE]
+
+  mixed_ploidy <- file.path(root, "mixed-ploidy.txt")
+  writeLines(c("T1 1", "T2 2"), mixed_ploidy, useBytes = TRUE)
+  mixed_output <- file.path(root, "phase-mixed-ploidy.bcf")
+  mixed_result <- rglimpse2_phase(
+    input_gl = file.path(data_root, oracle_case$target),
+    reference_bin = reference_bins[[oracle_case$id]],
+    output_bcf = mixed_output,
+    executable = scalar_executables@phase,
+    seed = 302L,
+    sample_ploidy = mixed_ploidy,
+    burnin = 1L,
+    main = 1L,
+    pbwt_depth = 2L,
+    k_init = 4L,
+    k_pbwt = 4L
+  )
+  expect_true(S7::S7_inherits(mixed_result, RGlimpse2RunResult))
+  mixed_observed <- inspect_bcf(mixed_output)
+  expect_true(
+    grepl(
+      "##FORMAT=<ID=GP,Number=G,Type=Float",
+      mixed_observed$header,
+      fixed = TRUE
+    )
+  )
+  first_record <- strsplit(mixed_observed$records[[1L]], "\t", fixed = TRUE)[[1L]]
+  format_fields <- strsplit(first_record[[9L]], ":", fixed = TRUE)[[1L]]
+  gp_index <- match("GP", format_fields)
+  expect_true(!is.na(gp_index))
+  gp_lengths <- vapply(
+    first_record[10:11],
+    function(sample_field) {
+      values <- strsplit(sample_field, ":", fixed = TRUE)[[1L]]
+      length(strsplit(values[[gp_index]], ",", fixed = TRUE)[[1L]])
+    },
+    integer(1L)
+  )
+  expect_identical(unname(gp_lengths), c(2L, 3L))
+
   oracle_records <- phase_records[[oracle_case$id]]
   simd <- rglimpse2_simd_info()
   expect_true(S7::S7_inherits(simd, RGlimpse2SimdInfo))

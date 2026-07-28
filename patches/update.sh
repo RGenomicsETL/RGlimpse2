@@ -42,7 +42,8 @@ write_patch 0003-use-portable-reference-environment-setup.patch \
 write_patch 0004-handle-zero-span-genetic-maps.patch \
   phase/src/containers/haplotype_set.cpp
 write_patch 0005-keep-symbolic-direct-bam-likelihoods-flat.patch \
-  phase/src/io/genotype_bam_caller.cpp
+  phase/src/io/genotype_bam_caller.cpp \
+  phase/src/io/genotype_writer.cpp
 write_patch 0006-ligate-all-haploid-overlaps-safely.patch \
   ligate/src/ligater/ligater_algorithm.cpp \
   ligate/src/ligater/ligater_header.h

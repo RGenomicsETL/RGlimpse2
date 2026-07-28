@@ -27,6 +27,15 @@
 #include <thread>
 #include <chrono>
 
+static bool is_acgt_sequence(const std::string& allele)
+{
+	if (allele.empty()) return false;
+	for (const char base : allele)
+		if (base != 'A' && base != 'C' && base != 'G' && base != 'T')
+			return false;
+	return true;
+}
+
 static int read_bam(void *data, bam1_t *b)
 {
 	aux_t * aux = (aux_t*) data;
@@ -258,8 +267,12 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
 			const bool is_snp = variant_site->type == VCF_SNP;
 			const bool is_indel = variant_site->type == VCF_INDEL;
 			const bool is_delet = is_indel ? variant_site->alt.size() == 1 : 0;
+			const bool direct_likelihood =
+				(is_snp || is_indel) &&
+				is_acgt_sequence(variant_site->ref) &&
+				is_acgt_sequence(variant_site->alt);
 
-			if (is_snp || is_indel)
+			if (direct_likelihood)
 			{
 				group_reads[is_indel + is_delet] (caller, variant_site);
 				compute_llk[is_indel] (caller, variant_site);
@@ -282,7 +295,7 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
 			++G.stats.depth_count[i][caller.gls.dp_ind];
 			G.stats.cov_ind[i].push(caller.gls.dp_ind);
 
-			if (is_snp || is_indel) caller.snp_called = is_snp;
+			if (direct_likelihood) caller.snp_called = is_snp;
 			++i_site;
 		}
 	}
