@@ -13,6 +13,9 @@
 - **Evan Nemerson**. Copyright holder.  
   SIMDe copyright holder
 
+- **Boost Software Authors**. Contributor, copyright holder.  
+  Boost C++ Libraries authors and copyright holders
+
 ## Citation
 
 Source:

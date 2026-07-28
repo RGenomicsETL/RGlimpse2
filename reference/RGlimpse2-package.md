@@ -42,3 +42,6 @@ Other contributors:
   copyright holder\]
 
 - Evan Nemerson (SIMDe copyright holder) \[copyright holder\]
+
+- Boost Software Authors (Boost C++ Libraries authors and copyright
+  holders) \[contributor, copyright holder\]

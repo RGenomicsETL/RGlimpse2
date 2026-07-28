@@ -13,21 +13,27 @@ RGlimpse2ErrorValue(
   message = character(0),
   code = character(0),
   details = list(),
-  source = NULL
+  source = NULL,
+  operation = character(0),
+  status = integer(0)
 )
 
 RGlimpse2InputErrorValue(
   message = character(0),
   code = character(0),
   details = list(),
-  source = NULL
+  source = NULL,
+  operation = character(0),
+  status = integer(0)
 )
 
 RGlimpse2OutputErrorValue(
   message = character(0),
   code = character(0),
   details = list(),
-  source = NULL
+  source = NULL,
+  operation = character(0),
+  status = integer(0)
 )
 
 RGlimpse2ProcessErrorValue(
@@ -60,8 +66,8 @@ RGlimpse2ProcessErrorValue(
 
 - operation:
 
-  Stable child-process operation identifier.
+  Empty or one stable child-process operation identifier.
 
 - status:
 
-  Child-process exit status when available.
+  Empty or one child-process exit status.
