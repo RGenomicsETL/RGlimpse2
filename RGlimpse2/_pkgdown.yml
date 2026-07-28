@@ -28,6 +28,7 @@ reference:
       - rglimpse2_chunk
       - rglimpse2_split_reference
       - rglimpse2_phase
+      - rglimpse2_phase_bam
       - rglimpse2_ligate
   - title: Results and errors
     contents:
