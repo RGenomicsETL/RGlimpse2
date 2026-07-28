@@ -1,6 +1,11 @@
 if (!requireNamespace("vcfppR", quietly = TRUE)) {
   exit_file("vcfppR is required for split-reference input validation")
 }
+if (identical(.Platform$OS.type, "windows")) {
+  exit_file(
+    "POSIX mock-executable tests run on Unix; Windows uses native split tests"
+  )
+}
 
 local({
   root <- tempfile("rglimpse2-split-input-")
