@@ -7,8 +7,9 @@
 #' returns.
 #'
 #' RGlimpse2 fixes the internal phase thread count at one so a supplied seed is
-#' not coupled to worker scheduling. The final BCF is published without
-#' replacing an existing path only after the child process succeeds.
+#' not coupled to worker scheduling. The final BCF and its CSI index are
+#' published without replacing existing paths only after the child process
+#' succeeds.
 #'
 #' @param alignments A non-empty data frame with one row per sample and columns:
 #'   `input_bam` (character absolute `.bam` or `.cram` path), `input_index`
@@ -44,7 +45,8 @@
 #' @param pbwt_modulo_cm Positive PBWT selection spacing in cM.
 #' @param k_init,k_pbwt Positive conditioning-state limits.
 #' @param log Empty or one absolute log output path.
-#' @return `RGlimpse2RunResult` or an `RGlimpse2ErrorValue`.
+#' @return `RGlimpse2RunResult` with `output_bcf` and `output_index` paths, or
+#'   an `RGlimpse2ErrorValue`.
 #' @export
 rglimpse2_phase_bams <- function(
   alignments,
@@ -272,7 +274,11 @@ rglimpse2_phase_bams <- function(
         inputs$reference_fasta <- reference_fasta
         inputs$reference_fasta_index <- reference_fasta_index
       }
-      outputs <- c(list(output_bcf = output_bcf), if (length(log)) list(log = log))
+      output_index <- paste0(output_bcf, ".csi")
+      outputs <- c(
+        list(output_bcf = output_bcf, output_index = output_index),
+        if (length(log)) list(log = log)
+      )
       ready <- .rgl_preflight(
         "phase_bams",
         executable,
@@ -288,8 +294,12 @@ rglimpse2_phase_bams <- function(
         tmpdir = dirname(output_bcf),
         fileext = ".bcf"
       )
+      staged_index <- paste0(staged_bcf, ".csi")
       on.exit(
-        unlink(c(bam_list, samples_file, staged_bcf), force = TRUE),
+        unlink(
+          c(bam_list, samples_file, staged_bcf, staged_index),
+          force = TRUE
+        ),
         add = TRUE
       )
       writeLines(
@@ -330,7 +340,7 @@ rglimpse2_phase_bams <- function(
         .rgl_optional_cli("--log", log)
       )
       staged_outputs <- c(
-        list(output_bcf = staged_bcf),
+        list(output_bcf = staged_bcf, output_index = staged_index),
         if (length(log)) list(log = log)
       )
       run <- .rgl_run_process(
@@ -341,8 +351,31 @@ rglimpse2_phase_bams <- function(
       )
       if (rglimpse2_is_error(run)) return(run)
 
-      published <- suppressWarnings(file.link(staged_bcf, output_bcf))
-      if (!isTRUE(published)) {
+      # Publish the index first so the final BCF path is never visible without
+      # its sidecar. If the BCF path loses a race, release the index claim.
+      index_published <- suppressWarnings(
+        file.link(staged_index, output_index)
+      )
+      if (!isTRUE(index_published)) {
+        occupied <- file.exists(output_index)
+        return(rglimpse2_error_value(
+          message = if (occupied) {
+            paste0("output_index already exists: ", output_index)
+          } else {
+            paste0("could not publish output_index: ", output_index)
+          },
+          kind = "output",
+          code = if (occupied) "output_exists" else "output_publish_failed",
+          details = list(
+            argument = "output_index",
+            path = output_index
+          )
+        ))
+      }
+
+      bcf_published <- suppressWarnings(file.link(staged_bcf, output_bcf))
+      if (!isTRUE(bcf_published)) {
+        unlink(output_index, force = TRUE)
         occupied <- file.exists(output_bcf)
         return(rglimpse2_error_value(
           message = if (occupied) {
@@ -358,7 +391,7 @@ rglimpse2_phase_bams <- function(
           )
         ))
       }
-      unlink(staged_bcf, force = TRUE)
+      unlink(c(staged_bcf, staged_index), force = TRUE)
 
       RGlimpse2RunResult(
         operation = run@operation,

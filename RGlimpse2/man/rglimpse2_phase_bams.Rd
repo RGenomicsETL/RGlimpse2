@@ -89,7 +89,8 @@ paired.}
 \item{log}{Empty or one absolute log output path.}
 }
 \value{
-\code{RGlimpse2RunResult} or an \code{RGlimpse2ErrorValue}.
+\code{RGlimpse2RunResult} with \code{output_bcf} and \code{output_index} paths, or
+an \code{RGlimpse2ErrorValue}.
 }
 \description{
 Invokes \code{GLIMPSE2_phase} once with its native \code{--bam-list} input. Genotype
@@ -100,6 +101,7 @@ returns.
 }
 \details{
 RGlimpse2 fixes the internal phase thread count at one so a supplied seed is
-not coupled to worker scheduling. The final BCF is published without
-replacing an existing path only after the child process succeeds.
+not coupled to worker scheduling. The final BCF and its CSI index are
+published without replacing existing paths only after the child process
+succeeds.
 }

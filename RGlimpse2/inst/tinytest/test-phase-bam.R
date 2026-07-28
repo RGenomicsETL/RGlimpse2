@@ -1,3 +1,9 @@
+if (identical(.Platform$OS.type, "windows")) {
+  exit_file(
+    "POSIX mock-executable tests run on Unix; Windows uses native phase tests"
+  )
+}
+
 local({
   root <- tempfile("rglimpse2-phase-bam;literal ")
   dir.create(root, recursive = TRUE)

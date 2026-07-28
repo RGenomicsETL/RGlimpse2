@@ -5,8 +5,8 @@
 - Add `rglimpse2_phase_bams()` for one native multi-sample
   `GLIMPSE2_phase --bam-list` call with explicit indexed alignments, sample
   names, and mixed haploid/diploid ploidy. Private BAM/ploidy tables are
-  removed after the call, and the BCF is published without replacement only
-  after successful staging.
+  removed after the call, and the BCF plus its CSI index are published without
+  replacement only after successful staging.
 - Make `rglimpse2_split_reference()` return a typed
   `non_biallelic_reference` input error before starting GLIMPSE2 when the
   requested reference region contains unsplit records.

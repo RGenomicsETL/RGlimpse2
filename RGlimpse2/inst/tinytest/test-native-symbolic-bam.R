@@ -59,6 +59,34 @@ local({
   expect_true(S7::S7_inherits(ref_run, RGlimpse2RunResult))
   expect_true(S7::S7_inherits(alt_run, RGlimpse2RunResult))
 
+  cohort_output <- file.path(root, "cohort.bcf")
+  cohort_index <- paste0(cohort_output, ".csi")
+  cohort_run <- rglimpse2_phase_bams(
+    alignments = data.frame(
+      input_bam = file.path(data_root, "symbolic-ref-read.bam"),
+      input_index = file.path(data_root, "symbolic-ref-read.bam.bai"),
+      sample_name = "target",
+      sample_ploidy = 2L,
+      stringsAsFactors = FALSE
+    ),
+    reference_bin = split@outputs$reference_bin,
+    output_bcf = cohort_output,
+    executable = executables@phase,
+    seed = 8102L,
+    burnin = 1L,
+    main = 1L,
+    pbwt_depth = 2L,
+    k_init = 4L,
+    k_pbwt = 4L
+  )
+  expect_true(S7::S7_inherits(cohort_run, RGlimpse2RunResult))
+  expect_identical(
+    cohort_run@outputs,
+    list(output_bcf = cohort_output, output_index = cohort_index)
+  )
+  expect_true(file.exists(cohort_output))
+  expect_true(file.exists(cohort_index))
+
   read_records <- function(path) {
     reader <- vcfppR::vcfreader$new(path)
     records <- character()
@@ -67,8 +95,10 @@ local({
   }
   ref_records <- read_records(ref_output)
   alt_records <- read_records(alt_output)
+  cohort_records <- read_records(cohort_output)
   expect_identical(length(ref_records), 50L)
   expect_identical(length(alt_records), 50L)
+  expect_identical(length(cohort_records), 50L)
   ref_symbolic <- ref_records[grepl(
     "^chr11\\t1240\\tsymbolic\\tA\\t<DEL>\\t",
     ref_records

@@ -54,11 +54,14 @@ if (!file.exists(file.path(source_dir, "boost", "version.hpp"))) {
 cxx <- split_command(r_config("CXX17"), "CXX17")
 ar <- split_command(r_config("AR"), "AR")
 ranlib <- split_command(r_config("RANLIB"), "RANLIB")
+# GCC 14 diagnoses Boost's wchar conversion sliding buffer before its guarded
+# first use. Keep this suppression confined to the pinned third-party closure.
 compile_flags <- c(
   split_flags(r_config("CXX17STD")),
   split_flags(r_config("CXX17FLAGS")),
   split_flags(r_config("CPPFLAGS", optional = TRUE)),
   if (.Platform$OS.type != "windows") "-fPIC",
+  "-Wno-uninitialized",
   "-DBOOST_ALL_NO_LIB=1",
   "-DBOOST_PROGRAM_OPTIONS_NO_LIB=1",
   "-DBOOST_IOSTREAMS_NO_LIB=1",

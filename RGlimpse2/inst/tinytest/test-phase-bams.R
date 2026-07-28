@@ -1,3 +1,9 @@
+if (identical(.Platform$OS.type, "windows")) {
+  exit_file(
+    "POSIX mock-executable tests run on Unix; Windows uses native cohort tests"
+  )
+}
+
 local({
   root <- tempfile("rglimpse2-phase-bams-")
   dir.create(root, recursive = TRUE)
@@ -49,6 +55,7 @@ local({
       "[ -f \"$bam_list\" ] || exit 9",
       "[ -f \"$samples_file\" ] || exit 10",
       "printf '%s\\n' \"$@\" > \"$output\"",
+      "printf 'mock phase index\\n' > \"${output}.csi\"",
       "while IFS= read -r line; do",
       "  printf 'bam-list-content=%s\\n' \"$line\" >> \"$output\"",
       "done < \"$bam_list\"",
@@ -94,9 +101,14 @@ local({
   )
   expect_true(S7::S7_inherits(result, RGlimpse2RunResult))
   expect_identical(result@operation, "phase_bams")
+  output_index <- paste0(output_bcf, ".csi")
   expect_identical(
     result@outputs,
-    list(output_bcf = output_bcf, log = log)
+    list(output_bcf = output_bcf, output_index = output_index, log = log)
+  )
+  expect_identical(
+    readLines(output_index, warn = FALSE),
+    "mock phase index"
   )
 
   arguments <- readLines(output_bcf, warn = FALSE, encoding = "UTF-8")
@@ -153,6 +165,7 @@ local({
   expect_false(file.exists(bam_list))
   expect_false(file.exists(samples_file))
   expect_false(file.exists(staged_bcf))
+  expect_false(file.exists(paste0(staged_bcf, ".csi")))
   expect_identical(
     normalizePath(dirname(staged_bcf), winslash = "/", mustWork = TRUE),
     normalizePath(dirname(output_bcf), winslash = "/", mustWork = TRUE)
@@ -171,6 +184,7 @@ local({
       "  previous=\"$argument\"",
       "done",
       "printf 'partial output\\n' > \"$output\"",
+      "printf 'partial index\\n' > \"${output}.csi\"",
       "printf '%s\\n' \"$output\" > \"$0.stage-path\"",
       "exit 17"
     ),
@@ -195,7 +209,9 @@ local({
     warn = FALSE
   )
   expect_false(file.exists(failed_output))
+  expect_false(file.exists(paste0(failed_output, ".csi")))
   expect_false(file.exists(failed_stage))
+  expect_false(file.exists(paste0(failed_stage, ".csi")))
 
   racing_executable <- file.path(root, "mock-phase-race")
   racing_output <- paste0(racing_executable, ".final.bcf")
@@ -209,6 +225,7 @@ local({
       "  previous=\"$argument\"",
       "done",
       "printf 'complete staged output\\n' > \"$output\"",
+      "printf 'complete staged index\\n' > \"${output}.csi\"",
       "printf '%s\\n' \"$output\" > \"$0.stage-path\"",
       "printf 'concurrent output\\n' > \"$0.final.bcf\""
     ),
@@ -235,7 +252,46 @@ local({
     paste0(racing_executable, ".stage-path"),
     warn = FALSE
   )
+  expect_false(file.exists(paste0(racing_output, ".csi")))
   expect_false(file.exists(raced_stage))
+  expect_false(file.exists(paste0(raced_stage, ".csi")))
+
+  index_racing_executable <- file.path(root, "mock-phase-index-race")
+  index_racing_output <- paste0(index_racing_executable, ".final.bcf")
+  writeLines(
+    c(
+      "#!/bin/sh",
+      "output=''",
+      "previous=''",
+      "for argument in \"$@\"; do",
+      "  if [ \"$previous\" = '--output' ]; then output=\"$argument\"; fi",
+      "  previous=\"$argument\"",
+      "done",
+      "printf 'complete staged output\\n' > \"$output\"",
+      "printf 'complete staged index\\n' > \"${output}.csi\"",
+      "printf 'concurrent index\\n' > \"$0.final.bcf.csi\""
+    ),
+    index_racing_executable,
+    useBytes = TRUE
+  )
+  Sys.chmod(index_racing_executable, mode = "0755")
+  index_raced <- rglimpse2_phase_bams(
+    alignments = alignments,
+    reference_bin = reference_bin,
+    output_bcf = index_racing_output,
+    executable = index_racing_executable,
+    seed = 3L,
+    reference_fasta = reference_fasta,
+    reference_fasta_index = reference_fasta_index
+  )
+  expect_true(S7::S7_inherits(index_raced, RGlimpse2OutputErrorValue))
+  expect_identical(index_raced@code, "output_exists")
+  expect_identical(index_raced@details$argument, "output_index")
+  expect_false(file.exists(index_racing_output))
+  expect_identical(
+    readLines(paste0(index_racing_output, ".csi"), warn = FALSE),
+    "concurrent index"
+  )
 
   invalid_ploidy <- alignments
   invalid_ploidy$sample_ploidy[[1L]] <- 3L
