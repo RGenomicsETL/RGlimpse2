@@ -12,7 +12,8 @@
   for one native multi-sample `GLIMPSE2_phase --bam-list` call with
   explicit indexed alignments, sample names, and mixed haploid/diploid
   ploidy. Private BAM/ploidy tables are removed after the call, and the
-  BCF is published without replacement only after successful staging.
+  BCF plus its CSI index are published without replacement only after
+  successful staging.
 
 - Make
   [`rglimpse2_split_reference()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_split_reference.md)

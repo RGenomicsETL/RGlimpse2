@@ -144,11 +144,12 @@ rglimpse2_phase_bams(
 
 ## Value
 
-`RGlimpse2RunResult` or an `RGlimpse2ErrorValue`.
+`RGlimpse2RunResult` with `output_bcf` and `output_index` paths, or an
+`RGlimpse2ErrorValue`.
 
 ## Details
 
 RGlimpse2 fixes the internal phase thread count at one so a supplied
-seed is not coupled to worker scheduling. The final BCF is published
-without replacing an existing path only after the child process
-succeeds.
+seed is not coupled to worker scheduling. The final BCF and its CSI
+index are published without replacing existing paths only after the
+child process succeeds.
