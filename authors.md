@@ -22,13 +22,13 @@ Source:
 [`DESCRIPTION`](https://github.com/RGenomicsETL/RGlimpse2/blob/main/DESCRIPTION)
 
 Toure SM (2026). *RGlimpse2: An 'R' Wrapper for 'GLIMPSE2' Low-Coverage
-Sequencing Imputation and Phasing*. R package version 0.0.0.9001,
+Sequencing Imputation and Phasing*. R package version 0.0.0.9002,
 <https://github.com/RGenomicsETL/RGlimpse2>.
 
     @Manual{,
       title = {RGlimpse2: An 'R' Wrapper for 'GLIMPSE2' Low-Coverage Sequencing Imputation and Phasing},
       author = {Sounkou Mahamane Toure},
       year = {2026},
-      note = {R package version 0.0.0.9001},
+      note = {R package version 0.0.0.9002},
       url = {https://github.com/RGenomicsETL/RGlimpse2},
     }

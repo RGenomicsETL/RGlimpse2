@@ -1,5 +1,11 @@
 # Changelog
 
+## RGlimpse2 0.0.0.9002
+
+- Preserve biallelic symbolic and ambiguous reference records during
+  direct-BAM phasing without attempting a read-level call, and declare
+  `GP` with VCF `Number=G` for ploidy-correct likelihood cardinality.
+
 ## RGlimpse2 0.0.0.9001
 
 - Add

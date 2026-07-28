@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,10 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9002" id="rglimpse2-0009002">RGlimpse2 0.0.0.9002<a class="anchor" aria-label="anchor" href="#rglimpse2-0009002"></a></h2>
+<ul><li>Preserve biallelic symbolic and ambiguous reference records during direct-BAM phasing without attempting a read-level call, and declare <code>GP</code> with VCF <code>Number=G</code> for ploidy-correct likelihood cardinality.</li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9001" id="rglimpse2-0009001">RGlimpse2 0.0.0.9001<a class="anchor" aria-label="anchor" href="#rglimpse2-0009001"></a></h2>
 <ul><li><p>Add <code><a href="../reference/rglimpse2_phase_bam.html">rglimpse2_phase_bam()</a></code> for deterministic direct phasing and imputation from one explicitly indexed BAM or CRAM.</p></li>
 <li><p>Add <code><a href="../reference/rglimpse2_phase_bams.html">rglimpse2_phase_bams()</a></code> for one native multi-sample <code>GLIMPSE2_phase --bam-list</code> call with explicit indexed alignments, sample names, and mixed haploid/diploid ploidy. Private BAM/ploidy tables are removed after the call, and the BCF plus its CSI index are published without replacement only after successful staging.</p></li>
@@ -53,7 +57,8 @@
 <li><p>Add Unix and Rtools <code>configure</code> paths, pinned SIMDe headers, source-archive drift auditing, and a checksummed Boost 1.90.0 build-only source closure so the executables no longer depend on separately installed Boost headers or libraries. Use parallel native compilation with 2–8 detected make jobs, real executable help/linkage tests, and a synthetic native end-to-end conformance test across all supported SIMD backends.</p></li>
 <li><p>Add pkgdown configuration, package-development targets, release checks for Linux, macOS, and Windows, and Linux R-devel coverage. WebAssembly installs retain map and metadata APIs but explicitly omit GLIMPSE2 child executables because that runtime cannot launch the required native processes.</p></li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
