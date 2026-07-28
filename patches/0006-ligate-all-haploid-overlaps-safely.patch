@@ -1,0 +1,79 @@
+diff --git a/ligate/src/ligater/ligater_algorithm.cpp b/ligate/src/ligater/ligater_algorithm.cpp
+index 11205cf..d8875c4 100644
+--- a/ligate/src/ligater/ligater_algorithm.cpp
++++ b/ligate/src/ligater/ligater_algorithm.cpp
+@@ -91,10 +91,17 @@ void ligater::phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf)
+ {
+ 	int nGTs = bcf_get_genotypes(hdr, line, &GTa, &mGTa);
+ 	if ( nGTs <= 0 ) return;    // GT field is not present
+-	for (auto i=0; i<bcf_hdr_nsamples(hdr); i++)
++	const int n_samples = bcf_hdr_nsamples(hdr);
++	if ( n_samples <= 0 || nGTs % n_samples )
++		vrb.error("Malformed GT field: genotype count is inconsistent with the number of samples");
++	const int gt_stride = nGTs / n_samples;
++	if ( gt_stride < 1 || gt_stride > 2 )
++		vrb.error("Unsupported GT ploidy while updating phase");
++	if ( gt_stride == 1 ) return;
++	for (int i=0; i<n_samples; i++)
+     {
+ 		if ( !swap_phase[uphalf][i] ) continue;
+-		int *gt = &GTa[i*2];
++		int32_t *gt = &GTa[i*gt_stride];
+ 		if ( bcf_gt_is_missing(gt[0]) || gt[1]==bcf_int32_vector_end ) continue;
+ 		if (!bcf_gt_is_phased(gt[1])) continue;
+         const int gt0 = bcf_gt_phased(bcf_gt_allele(gt[1])==1);
+@@ -105,12 +112,19 @@ void ligater::phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf)
+     bcf_update_genotypes(hdr,line,GTa,nGTs);
+ }
+ 
+-void ligater::update_distances()
++void ligater::update_distances(const int nGTsa, const int nGTsb)
+ {
++	if ( nsamples <= 0 || nGTsa % nsamples || nGTsb % nsamples )
++		vrb.error("Malformed GT field in overlap: genotype count is inconsistent with the number of samples");
++	const int gt_stride_a = nGTsa / nsamples;
++	const int gt_stride_b = nGTsb / nsamples;
++	if ( gt_stride_a < 1 || gt_stride_a > 2 || gt_stride_b < 1 || gt_stride_b > 2 )
++		vrb.error("Unsupported GT ploidy in overlap");
++	if ( gt_stride_a == 1 || gt_stride_b == 1 ) return;
+ 	for (int i = 0 ; i < nsamples; i++)
+ 	{
+-	    int *gta = &GTa[i*2];
+-	    int *gtb = &GTb[i*2];
++	    int32_t *gta = &GTa[i*gt_stride_a];
++	    int32_t *gtb = &GTb[i*gt_stride_b];
+ 	    if ( gta[1]==bcf_int32_vector_end || gtb[1]==bcf_int32_vector_end ) continue;
+ 	    if ( bcf_gt_is_missing(gta[0]) || bcf_gt_is_missing(gta[1]) || bcf_gt_is_missing(gtb[0]) || bcf_gt_is_missing(gtb[1]) ) continue;
+ 	    if ( !bcf_gt_is_phased(gta[1]) || !bcf_gt_is_phased(gtb[1]) ) continue;
+@@ -174,7 +188,7 @@ void ligater::scan_overlap(const int ifname, const char * seek_chr, int seek_pos
+ 		if ( nGTsa <= 0 || nGTsb <= 0 )
+ 			vrb.error("GT field is not present in overlap at position: " + std::to_string(line0->pos + 1));
+ 
+-		update_distances();
++		update_distances(nGTsa, nGTsb);
+ 		last_pos = line0->pos;
+ 		++n_sites_buff;
+ 		++n_sites_tot;
+@@ -470,4 +484,3 @@ void ligater::ligate() {
+ 	if (n_variants == 0) vrb.error("No variants to be phased in files");
+ 	vrb.title("Writing completed [L=" + stb.str(n_variants) + "] (" + stb.str(tac.rel_time()*1.0/1000, 2) + "s)");
+ }
+-
+diff --git a/ligate/src/ligater/ligater_header.h b/ligate/src/ligater/ligater_header.h
+index d9d43aa..3fdba45 100644
+--- a/ligate/src/ligater/ligater_header.h
++++ b/ligate/src/ligater/ligater_header.h
+@@ -76,7 +76,7 @@ public:
+ 	//FUNCTIONS
+ 	void updateHS(int *);
+ 	int update_switching();
+-	void update_distances();
++	void update_distances(const int nGTsa, const int nGTsb);
+ 	void phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf);
+ 	void remove_info(bcf_hdr_t *hdr, bcf1_t *line);
+ 	void remove_format(bcf_hdr_t *hdr, bcf1_t *line);
+@@ -86,4 +86,3 @@ public:
+ 
+ #endif
+ 
+-
