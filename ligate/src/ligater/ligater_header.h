@@ -76,7 +76,7 @@ public:
 	//FUNCTIONS
 	void updateHS(int *);
 	int update_switching();
-	void update_distances();
+	void update_distances(const int nGTsa, const int nGTsb);
 	void phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf);
 	void remove_info(bcf_hdr_t *hdr, bcf1_t *line);
 	void remove_format(bcf_hdr_t *hdr, bcf1_t *line);
@@ -85,5 +85,4 @@ public:
 };
 
 #endif
-
 

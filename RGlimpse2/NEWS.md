@@ -13,6 +13,8 @@
 - Keep biallelic symbolic and other non-observable reference variants in
   direct-BAM imputation with flat read likelihoods instead of routing them
   through the SNP caller.
+- Ligate overlapping all-haploid chunks using the one-value-per-sample GT
+  stride returned by HTSlib while preserving mixed and diploid phase matching.
 
 - The R package interface is now distributed under GPL-2 or later; bundled
   upstream components retain their original licences and notices.
