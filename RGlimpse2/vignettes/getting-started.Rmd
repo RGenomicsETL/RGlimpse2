@@ -94,6 +94,27 @@ phase_result <- rglimpse2_phase(
 )
 ```
 
+For low-pass whole-genome sequencing, the phase executable can call SNP
+likelihoods directly from one coordinate-sorted BAM or CRAM. Supply the
+alignment index explicitly; it must use an adjacent name HTSlib can discover.
+CRAM also requires the reference FASTA and adjacent `.fai`.
+
+```{r phase-bam}
+phase_bam_result <- rglimpse2_phase_bam(
+  input_bam = "/data/sample.bam",
+  input_index = "/data/sample.bam.bai",
+  reference_bin = split_result@outputs$reference_bin,
+  output_bcf = "/work/phase-bam.chr22.1.bcf",
+  executable = executables@phase,
+  seed = 103L,
+  sample_name = "sample",
+  sample_ploidy = 2L
+)
+```
+
+The default calls likelihoods at SNPs and keeps flat likelihoods at indels.
+Set `call_indels = TRUE` only when the GLIMPSE2 indel calling model is intended.
+
 After writing an ordered file containing one absolute phase-output path per
 line, ligate the chunks:
 

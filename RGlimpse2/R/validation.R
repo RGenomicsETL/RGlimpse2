@@ -134,6 +134,132 @@
   invisible(path)
 }
 
+.rgl_validate_optional_string <- function(value, argument) {
+  if (!is.character(value) || length(value) > 1L || anyNA(value)) {
+    .rgl_signal_contract_violation(
+      paste0(argument, " must be empty or one string"),
+      code = "invalid_optional_string",
+      details = list(argument = argument)
+    )
+  }
+  if (length(value) && (!nzchar(value) || grepl("[\r\n\t]", value))) {
+    .rgl_signal_contract_violation(
+      paste0(argument, " must be non-empty and contain no tabs or newlines"),
+      code = "invalid_optional_string",
+      details = list(argument = argument)
+    )
+  }
+  invisible(value)
+}
+
+.rgl_alignment_format <- function(path) {
+  if (grepl("\\.bam$", path, ignore.case = TRUE)) return("bam")
+  if (grepl("\\.cram$", path, ignore.case = TRUE)) return("cram")
+  .rgl_signal_contract_violation(
+    "input_bam must end in .bam or .cram",
+    code = "unsupported_alignment_input",
+    details = list(path = path)
+  )
+}
+
+.rgl_validate_discoverable_alignment_index <- function(
+  alignment,
+  index,
+  format
+) {
+  without_extension <- sub(
+    paste0("\\.", format, "$"),
+    "",
+    alignment,
+    ignore.case = TRUE
+  )
+  candidates <- if (identical(format, "bam")) {
+    c(
+      paste0(alignment, ".bai"),
+      paste0(without_extension, ".bai"),
+      paste0(alignment, ".csi"),
+      paste0(without_extension, ".csi")
+    )
+  } else {
+    c(
+      paste0(alignment, ".crai"),
+      paste0(without_extension, ".crai")
+    )
+  }
+  if (!.rgl_path_key(index) %in% vapply(
+    candidates,
+    .rgl_path_key,
+    character(1L)
+  )) {
+    .rgl_signal_contract_violation(
+      "input_index is not an adjacent index path HTSlib will discover",
+      code = "undiscoverable_alignment_index",
+      details = list(
+        alignment = alignment,
+        index = index,
+        accepted_paths = candidates
+      )
+    )
+  }
+  distinct_candidates <- candidates[
+    !duplicated(vapply(candidates, .rgl_path_key, character(1L)))
+  ]
+  other_existing <- distinct_candidates[
+    vapply(distinct_candidates, file.exists, logical(1L)) &
+      vapply(distinct_candidates, .rgl_path_key, character(1L)) !=
+        .rgl_path_key(index)
+  ]
+  if (length(other_existing)) {
+    .rgl_signal_contract_violation(
+      "another adjacent alignment index could be selected instead of input_index",
+      code = "ambiguous_alignment_indexes",
+      details = list(
+        alignment = alignment,
+        input_index = index,
+        other_existing = other_existing
+      )
+    )
+  }
+  invisible(index)
+}
+
+.rgl_validate_alignment_reference <- function(
+  format,
+  reference_fasta,
+  reference_fasta_index
+) {
+  if (xor(length(reference_fasta) == 1L, length(reference_fasta_index) == 1L)) {
+    .rgl_signal_contract_violation(
+      "reference_fasta and reference_fasta_index must be supplied together",
+      code = "incomplete_alignment_reference"
+    )
+  }
+  if (identical(format, "cram") && !length(reference_fasta)) {
+    .rgl_signal_contract_violation(
+      "CRAM input requires reference_fasta and reference_fasta_index",
+      code = "cram_reference_required"
+    )
+  }
+  if (
+    length(reference_fasta) &&
+      !identical(
+        .rgl_path_key(reference_fasta_index),
+        .rgl_path_key(paste0(reference_fasta, ".fai"))
+      )
+  ) {
+    .rgl_signal_contract_violation(
+      "reference_fasta_index must be reference_fasta with .fai appended",
+      code = "undiscoverable_fasta_index",
+      details = list(
+        reference_fasta = reference_fasta,
+        reference_fasta_index = reference_fasta_index,
+        expected = paste0(reference_fasta, ".fai")
+      )
+    )
+  }
+  invisible(TRUE)
+}
+
 .rgl_require_input <- function(path, argument) {
   .rgl_assert_absolute_path(path, argument)
   if (!file.exists(path) || dir.exists(path)) {

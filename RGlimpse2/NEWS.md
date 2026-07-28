@@ -1,5 +1,8 @@
 # RGlimpse2 0.0.0.9000
 
+- Add `rglimpse2_phase_bam()` for deterministic direct phasing and imputation
+  from one explicitly indexed BAM or CRAM.
+
 - The R package interface is now distributed under GPL-2 or later; bundled
   upstream components retain their original licences and notices.
 

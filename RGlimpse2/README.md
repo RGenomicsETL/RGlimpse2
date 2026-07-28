@@ -51,7 +51,7 @@ head(rglimpse2_genetic_maps())
 ```
 
 | Assembly | Map                                           |          Coordinates |
-|----------|-----------------------------------------------|---------------------:|
+| -------- | --------------------------------------------- | -------------------: |
 | GRCh37   | Y non-PAR                                     | 2,649,521-59,034,049 |
 | GRCh38   | Y non-PAR                                     | 2,781,480-56,887,902 |
 | GRCh37   | mitochondrial (`M`, `MT`, `chrM`, or `chrMT`) |             1-16,569 |
@@ -91,6 +91,28 @@ chunks <- rglimpse2_chunk(
 )
 ```
 
+Direct BAM/CRAM phasing uses the same selected phase executable. The
+alignment index is supplied explicitly and must use an adjacent filename
+that HTSlib will discover:
+
+``` r
+imputed <- rglimpse2_phase_bam(
+  input_bam = "/data/sample.bam",
+  input_index = "/data/sample.bam.bai",
+  reference_bin = "/reference/chr22_100000_5000000.bin",
+  output_bcf = "/work/sample.chr22.01.bcf",
+  executable = executables@phase,
+  seed = 20260728L,
+  sample_name = "sample",
+  sample_ploidy = 2L
+)
+```
+
+CRAM input additionally requires an explicit reference FASTA and its
+adjacent `.fai`. SNP likelihoods are called directly from the alignment
+by default; `call_indels = TRUE` enables the GLIMPSE2 indel calling
+model.
+
 The split-reference, phase, and ligate wrappers follow the same
 contract. They do not search `PATH`, overwrite an output, build shell
 command strings, or retain workflow state. Invalid calls signal typed
@@ -114,8 +136,8 @@ version against the htslib version supplied and loaded by `Rduckhts`.
 
 `GLIMPSE2_phase` is built as complete, process-isolated executables:
 
-- x86_64: scalar SIMDe, AVX2, and AVX-512F/BW/VL;
-- ARM: scalar SIMDe and NEON.
+  - x86\_64: scalar SIMDe, AVX2, and AVX-512F/BW/VL;
+  - ARM: scalar SIMDe and NEON.
 
 A baseline C probe checks CPU features and operating-system vector state
 before `"auto"` selects a binary. Explicit backend selection supports

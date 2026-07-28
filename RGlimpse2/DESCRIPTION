@@ -72,5 +72,6 @@ Collate:
     'chunk.R'
     'split-reference.R'
     'phase.R'
+    'phase-bam.R'
     'ligate.R'
     'RGlimpse2-package.R'
