@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -142,9 +142,28 @@ than inside a phase child:</p>
 <span>  seed <span class="op">=</span> <span class="fl">103L</span>,</span>
 <span>  threads <span class="op">=</span> <span class="fl">1L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p>For low-pass whole-genome sequencing, the phase executable can call
+SNP likelihoods directly from one coordinate-sorted BAM or CRAM. Supply
+the alignment index explicitly; it must use an adjacent name HTSlib can
+discover. CRAM also requires the reference FASTA and adjacent
+<code>.fai</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">phase_bam_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_phase_bam.html">rglimpse2_phase_bam</a></span><span class="op">(</span></span>
+<span>  input_bam <span class="op">=</span> <span class="st">"/data/sample.bam"</span>,</span>
+<span>  input_index <span class="op">=</span> <span class="st">"/data/sample.bam.bai"</span>,</span>
+<span>  reference_bin <span class="op">=</span> <span class="va">split_result</span><span class="op">@</span><span class="va">outputs</span><span class="op">$</span><span class="va">reference_bin</span>,</span>
+<span>  output_bcf <span class="op">=</span> <span class="st">"/work/phase-bam.chr22.1.bcf"</span>,</span>
+<span>  executable <span class="op">=</span> <span class="va">executables</span><span class="op">@</span><span class="va">phase</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">103L</span>,</span>
+<span>  sample_name <span class="op">=</span> <span class="st">"sample"</span>,</span>
+<span>  sample_ploidy <span class="op">=</span> <span class="fl">2L</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The default calls likelihoods at SNPs and keeps flat likelihoods at
+indels. Set <code>call_indels = TRUE</code> only when the GLIMPSE2 indel
+calling model is intended.</p>
 <p>After writing an ordered file containing one absolute phase-output
 path per line, ligate the chunks:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ligate_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_ligate.html">rglimpse2_ligate</a></span><span class="op">(</span></span>
 <span>  input_list <span class="op">=</span> <span class="st">"/work/phase-files.txt"</span>,</span>
 <span>  output_bcf <span class="op">=</span> <span class="st">"/work/phase.chr22.bcf"</span>,</span>
@@ -161,7 +180,7 @@ subclass. Contract violations signal an
 <div class="section level2">
 <h2 id="simd-selection">SIMD selection<a class="anchor" aria-label="anchor" href="#simd-selection"></a>
 </h2>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">info</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rglimpse2_simd_info.html">rglimpse2_simd_info</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">info</span><span class="op">@</span><span class="va">compiled_backends</span></span>
 <span><span class="va">info</span><span class="op">@</span><span class="va">cpu_supported_backends</span></span>

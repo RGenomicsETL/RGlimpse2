@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,8 +87,8 @@
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="reference/rglimpse2_genetic_maps.html">rglimpse2_genetic_maps</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <colgroup>
-<col width="12%">
-<col width="59%">
+<col width="10%">
+<col width="61%">
 <col width="27%">
 </colgroup>
 <thead><tr>
@@ -144,13 +144,26 @@
 <span>  seed <span class="op">=</span> <span class="fl">20260727L</span>,</span>
 <span>  threads <span class="op">=</span> <span class="fl">2L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p>Direct BAM/CRAM phasing uses the same selected phase executable. The alignment index is supplied explicitly and must use an adjacent filename that HTSlib will discover:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">imputed</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_phase_bam.html">rglimpse2_phase_bam</a></span><span class="op">(</span></span>
+<span>  input_bam <span class="op">=</span> <span class="st">"/data/sample.bam"</span>,</span>
+<span>  input_index <span class="op">=</span> <span class="st">"/data/sample.bam.bai"</span>,</span>
+<span>  reference_bin <span class="op">=</span> <span class="st">"/reference/chr22_100000_5000000.bin"</span>,</span>
+<span>  output_bcf <span class="op">=</span> <span class="st">"/work/sample.chr22.01.bcf"</span>,</span>
+<span>  executable <span class="op">=</span> <span class="va">executables</span><span class="op">@</span><span class="va">phase</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">20260728L</span>,</span>
+<span>  sample_name <span class="op">=</span> <span class="st">"sample"</span>,</span>
+<span>  sample_ploidy <span class="op">=</span> <span class="fl">2L</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>CRAM input additionally requires an explicit reference FASTA and its adjacent <code>.fai</code>. SNP likelihoods are called directly from the alignment by default; <code>call_indels = TRUE</code> enables the GLIMPSE2 indel calling model.</p>
 <p>The split-reference, phase, and ligate wrappers follow the same contract. They do not search <code>PATH</code>, overwrite an output, build shell command strings, or retain workflow state. Invalid calls signal typed <code>rglimpse2_contract_violation</code> conditions; expected operational failures are returned as typed S7 error values.</p>
 </div>
 <div class="section level2">
 <h2 id="one-htslib-authority">One htslib authority<a class="anchor" aria-label="anchor" href="#one-htslib-authority"></a>
 </h2>
 <p>The package does not vendor or discover another htslib. During configuration it requires:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">Rduckhts</span><span class="fu">::</span><span class="fu"><a href="https://rgenomicsetl.r-universe.dev/Rduckhts/reference/rduckhts_htslib_config.html" class="external-link">rduckhts_htslib_config</a></span><span class="op">(</span>validate <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>Every executable is built with the returned headers and exact library contract. Runtime executable discovery revalidates the packaged build version against the htslib version supplied and loaded by <code>Rduckhts</code>.</p>
 </div>
@@ -163,7 +176,7 @@
 <li>ARM: scalar SIMDe and NEON.</li>
 </ul>
 <p>A baseline C probe checks CPU features and operating-system vector state before <code>"auto"</code> selects a binary. Explicit backend selection supports conformance and reproducibility testing without process-global dispatch state.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/rglimpse2_simd_info.html">rglimpse2_simd_info</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">scalar</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_executables.html">rglimpse2_executables</a></span><span class="op">(</span>phase_backend <span class="op">=</span> <span class="st">"scalar"</span><span class="op">)</span></span></code></pre></div>
 <p>The native tests run all four packaged GLIMPSE2 programs against eight tiny <code>vcfppR</code>-generated and <code>Rduckhts</code>-indexed BCF reference/target pairs. They cover <code>1</code>/<code>chr1</code>, <code>Y</code>/<code>chrY</code>, and <code>M</code>/<code>MT</code>/<code>chrM</code>/<code>chrMT</code>, including haploid Y and mitochondrial targets, and require identical fixed-seed phase records from every runtime-supported backend. No executable test doubles are used.</p>
@@ -172,8 +185,8 @@
 <h2 id="building-this-fork">Building this fork<a class="anchor" aria-label="anchor" href="#building-this-fork"></a>
 </h2>
 <p>The upstream GLIMPSE2 tree remains the repository root. The R package is nested under <code>RGlimpse2/</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">make</span> r-package-bootstrap</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">make</span> r-package-check</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">make</span> r-package-bootstrap</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">make</span> r-package-check</span></code></pre></div>
 <p>Reference-panel copying evidence is an inference diagnostic. <code>RGlimpse2</code> does not call it local ancestry; that claim requires a separately calibrated and validated decoder.</p>
 </div>
 </div>

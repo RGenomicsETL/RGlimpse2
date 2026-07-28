@@ -25,6 +25,8 @@
   : Build one GLIMPSE2 binary reference chunk
 - [`rglimpse2_phase()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_phase.md)
   : Phase and impute one GLIMPSE2 chunk from genotype likelihoods
+- [`rglimpse2_phase_bam()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_phase_bam.md)
+  : Phase and impute one GLIMPSE2 chunk directly from one BAM or CRAM
 - [`rglimpse2_ligate()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_ligate.md)
   : Ligate ordered GLIMPSE2 chunk outputs
 

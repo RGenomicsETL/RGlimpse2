@@ -1,6 +1,11 @@
 # Changelog
 
-## RGlimpse2 0.0.0.9000
+## RGlimpse2 0.0.0.9001
+
+- Add
+  [`rglimpse2_phase_bam()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_phase_bam.md)
+  for deterministic direct phasing and imputation from one explicitly
+  indexed BAM or CRAM.
 
 - The R package interface is now distributed under GPL-2 or later;
   bundled upstream components retain their original licences and
