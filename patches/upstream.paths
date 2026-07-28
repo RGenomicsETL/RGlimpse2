@@ -1,4 +1,6 @@
 common.mk
+ligate/src/ligater/ligater_algorithm.cpp
+ligate/src/ligater/ligater_header.h
 makefile
 phase/src/caller/caller_initialise.cpp
 phase/src/containers/haplotype_set.cpp
