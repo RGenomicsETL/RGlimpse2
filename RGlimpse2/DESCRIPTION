@@ -77,5 +77,6 @@ Collate:
     'split-reference.R'
     'phase.R'
     'phase-bam.R'
+    'phase-bams.R'
     'ligate.R'
     'RGlimpse2-package.R'

@@ -29,6 +29,7 @@ reference:
       - rglimpse2_split_reference
       - rglimpse2_phase
       - rglimpse2_phase_bam
+      - rglimpse2_phase_bams
       - rglimpse2_ligate
   - title: Results and errors
     contents:
