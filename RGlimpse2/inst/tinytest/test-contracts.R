@@ -1,3 +1,7 @@
+if (grepl("wasm|emscripten", R.version$platform, ignore.case = TRUE)) {
+  exit_file("GLIMPSE2 child processes are unavailable on WebAssembly")
+}
+
 local({
   executables <- rglimpse2_executables(phase_backend = "scalar")
   expect_true(S7::S7_inherits(executables, RGlimpse2Executables))
@@ -124,6 +128,8 @@ local({
   )
   expect_true(S7::S7_inherits(missing_directory, RGlimpse2OutputErrorValue))
   expect_identical(missing_directory@code, "output_directory_missing")
+  expect_identical(missing_directory@operation, character())
+  expect_identical(missing_directory@status, integer())
 
   split_prefix <- file.path(root, "canonical")
   canonical_bin <- paste0(split_prefix, "_chr1_1_200.bin")
@@ -170,6 +176,8 @@ local({
   )
   expect_true(S7::S7_inherits(duplicate_chunks, RGlimpse2InputErrorValue))
   expect_identical(duplicate_chunks@code, "invalid_ligate_input_list")
+  expect_identical(duplicate_chunks@operation, character())
+  expect_identical(duplicate_chunks@status, integer())
   expect_identical(duplicate_chunks@details$duplicated, chunk)
 
   malformed_list <- file.path(root, "malformed.list")

@@ -1,3 +1,7 @@
+if (grepl("wasm|emscripten", R.version$platform, ignore.case = TRUE)) {
+  exit_file("GLIMPSE2 child processes are unavailable on WebAssembly")
+}
+
 bin <- system.file("glimpse2", "bin", package = "RGlimpse2")
 expect_true(dir.exists(bin))
 

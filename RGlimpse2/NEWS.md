@@ -5,6 +5,9 @@
 
 - The R package interface is now distributed under GPL-2 or later; bundled
   upstream components retain their original licences and notices.
+- Give every typed operational error the same optional child-process operation
+  and status properties. This preserves the error-value contract when binary
+  build systems install and check separate copies of the package.
 
 - Add a nested R package that builds pinned GLIMPSE2 chunk, split-reference,
   phase, and ligate executables against the validated htslib contract supplied
@@ -27,8 +30,12 @@
 - Build scalar and architecture-specific phase executables and select only
   runtime-supported AVX2, AVX-512F/BW/VL, or NEON backends.
 - Add Unix and Rtools `configure` paths, pinned SIMDe headers, source-archive
-  drift auditing, parallel native compilation using 2--8 detected make jobs,
+  drift auditing, and a checksummed Boost 1.90.0 build-only source closure so
+  the executables no longer depend on separately installed Boost headers or
+  libraries. Use parallel native compilation with 2--8 detected make jobs,
   real executable help/linkage tests, and a synthetic native end-to-end
   conformance test across all supported SIMD backends.
 - Add pkgdown configuration, package-development targets, release checks for
-  Linux, macOS, and Windows, and Linux R-devel coverage.
+  Linux, macOS, and Windows, and Linux R-devel coverage. WebAssembly installs
+  retain map and metadata APIs but explicitly omit GLIMPSE2 child executables
+  because that runtime cannot launch the required native processes.

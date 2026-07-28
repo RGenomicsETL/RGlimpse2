@@ -36,11 +36,17 @@ fi
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 package_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
 archive="$package_root/tools/glimpse2-source.tar.xz"
+boost_archive="$package_root/tools/boost-source.tar.xz"
 build_root="$package_root/tools/glimpse2-build"
+boost_root="$build_root/boost"
 bin_dir="$package_root/inst/glimpse2/bin"
 
 if [ ! -f "$archive" ]; then
   echo "ERROR: missing pinned GLIMPSE2 source archive: $archive" >&2
+  exit 1
+fi
+if [ ! -f "$boost_archive" ]; then
+  echo "ERROR: missing pinned Boost source archive: $boost_archive" >&2
   exit 1
 fi
 
@@ -72,16 +78,6 @@ if [ -z "$target_arch" ]; then
   echo "ERROR: R did not report a target architecture" >&2
   exit 1
 fi
-
-rm -rf "$build_root"
-mkdir -p "$build_root" "$bin_dir"
-trap 'rm -rf "$build_root"' EXIT INT HUP TERM
-
-tar -xJf "$archive" -C "$build_root"
-"$rscript_command" "$package_root/tools/write-make-config.R" \
-  "$build_root/rglimpse2-scalar.mk" scalar \
-  "$package_root/inst/glimpse2/htslib-version"
-
 rm -f \
   "$bin_dir/GLIMPSE2_chunk" "$bin_dir/GLIMPSE2_chunk.exe" \
   "$bin_dir/GLIMPSE2_split_reference" "$bin_dir/GLIMPSE2_split_reference.exe" \
@@ -90,6 +86,33 @@ rm -f \
   "$bin_dir/GLIMPSE2_phase_avx512" "$bin_dir/GLIMPSE2_phase_avx512.exe" \
   "$bin_dir/GLIMPSE2_phase_neon" "$bin_dir/GLIMPSE2_phase_neon.exe" \
   "$bin_dir/GLIMPSE2_ligate" "$bin_dir/GLIMPSE2_ligate.exe"
+target_platform=$(
+  "$rscript_command" -e 'cat(tolower(R.version$platform))'
+)
+target_compiler=$(
+  "$r_command" CMD config CXX17
+)
+case "$target_platform $target_compiler ${CC:-} ${CXX:-}" in
+  *emscripten*|*wasm*|*em++*|*emcc*)
+    rm -rf "$build_root"
+    rm -f "$package_root/inst/glimpse2/htslib-version"
+    echo "RGlimpse2 configure: WebAssembly has no child-process executable runtime"
+    exit 0
+    ;;
+esac
+
+rm -rf "$build_root"
+mkdir -p "$build_root" "$bin_dir"
+trap 'rm -rf "$build_root"' EXIT INT HUP TERM
+
+tar -xJf "$archive" -C "$build_root"
+"$rscript_command" "$package_root/tools/build-boost-source.R" \
+  "$boost_archive" "$boost_root"
+RGLIMPSE2_BOOST_ROOT=$boost_root
+export RGLIMPSE2_BOOST_ROOT
+"$rscript_command" "$package_root/tools/write-make-config.R" \
+  "$build_root/rglimpse2-scalar.mk" scalar \
+  "$package_root/inst/glimpse2/htslib-version"
 
 run_make() {
   # R CMD config MAKE may include implementation-specific arguments.

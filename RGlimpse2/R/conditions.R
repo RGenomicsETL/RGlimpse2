@@ -8,6 +8,8 @@
 #' @param code Stable machine-readable code.
 #' @param details Structured error details.
 #' @param source Optional source condition or backend value.
+#' @param operation Empty or one stable child-process operation identifier.
+#' @param status Empty or one child-process exit status.
 #' @export
 RGlimpse2ErrorValue <- S7::new_class(
   "RGlimpse2ErrorValue",
@@ -17,7 +19,9 @@ RGlimpse2ErrorValue <- S7::new_class(
     message = .rgl_scalar_string,
     code = .rgl_id,
     details = S7::class_list,
-    source = S7::class_any
+    source = S7::class_any,
+    operation = .rgl_optional_id,
+    status = .rgl_optional_integer
   )
 )
 
@@ -38,17 +42,11 @@ RGlimpse2OutputErrorValue <- S7::new_class(
 )
 
 #' @rdname RGlimpse2ErrorValue
-#' @param operation Stable child-process operation identifier.
-#' @param status Child-process exit status when available.
 #' @export
 RGlimpse2ProcessErrorValue <- S7::new_class(
   "RGlimpse2ProcessErrorValue",
   package = "RGlimpse2",
-  parent = RGlimpse2ErrorValue,
-  properties = list(
-    operation = .rgl_id,
-    status = .rgl_optional_integer
-  )
+  parent = RGlimpse2ErrorValue
 )
 
 #' Construct a typed RGlimpse2 operational error
@@ -77,13 +75,15 @@ rglimpse2_error_value <- function(
         message = message,
         code = code,
         details = details,
-        source = source
+        source = source,
+        operation = character(),
+        status = integer()
       )
       switch(kind,
         input = do.call(RGlimpse2InputErrorValue, common),
         output = do.call(RGlimpse2OutputErrorValue, common),
         process = {
-          .rgl_assert_scalar_character(operation, "operation")
+          operation <- .rgl_assert_scalar_character(operation, "operation")
           if (length(status)) {
             status <- .rgl_assert_integer(
               status,
@@ -92,10 +92,9 @@ rglimpse2_error_value <- function(
               maximum = .Machine$integer.max
             )
           }
-          do.call(
-            RGlimpse2ProcessErrorValue,
-            c(common, list(operation = operation, status = status))
-          )
+          common$operation <- operation
+          common$status <- status
+          do.call(RGlimpse2ProcessErrorValue, common)
         }
       )
     }

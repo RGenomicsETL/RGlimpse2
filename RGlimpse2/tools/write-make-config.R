@@ -36,63 +36,17 @@ if (!file.exists(file.path(simde_include, "simde", "x86", "avx2.h"))) {
   stop("the pinned GLIMPSE2 source archive did not provide SIMDe headers")
 }
 
-multiarch <- if (file.exists("/usr/bin/dpkg-architecture")) {
-  system2(
-    "/usr/bin/dpkg-architecture",
-    "-qDEB_HOST_MULTIARCH",
-    stdout = TRUE,
-    stderr = FALSE
-  )
-} else {
-  character()
+boost_root <- Sys.getenv("RGLIMPSE2_BOOST_ROOT", unset = "")
+if (!nzchar(boost_root) || !dir.exists(boost_root)) {
+  stop("RGLIMPSE2_BOOST_ROOT does not identify the pinned Boost build")
 }
-local_soft <- r_config("LOCAL_SOFT", optional = TRUE)
-if (!nzchar(local_soft) || !dir.exists(local_soft)) local_soft <- character()
-lib_dirs <- unique(c(
-  file.path(local_soft, "lib"),
-  "/opt/homebrew/lib",
-  "/usr/local/lib",
-  if (length(multiarch) && nzchar(multiarch[[1L]])) {
-    file.path("/usr/lib", multiarch[[1L]])
-  },
-  "/usr/lib64",
-  "/usr/lib"
-))
-lib_dirs <- lib_dirs[dir.exists(lib_dirs)]
-include_dirs <- unique(c(
-  file.path(local_soft, "include"),
-  "/opt/homebrew/include",
-  "/usr/local/include",
-  "/usr/include"
-))
-include_dirs <- include_dirs[dir.exists(include_dirs)]
-boost_include <- include_dirs[
-  file.exists(file.path(include_dirs, "boost", "version.hpp"))
-][1L]
-if (is.na(boost_include)) stop("Boost headers were not found")
-
+boost_source <- file.path(boost_root, "source")
+boost_include <- file.path(boost_source, "boost", "version.hpp")
+if (!file.exists(boost_include)) stop("pinned Boost headers were not built")
 boost_library <- function(name) {
-  exact <- c(
-    paste0("libboost_", name, ".a"),
-    paste0("libboost_", name, "-mt-x64.a"),
-    paste0("libboost_", name, "-mt-a64.a"),
-    paste0("libboost_", name, ".so"),
-    paste0("libboost_", name, ".dylib")
-  )
-  candidates <- unlist(lapply(
-    lib_dirs,
-    function(directory) {
-      discovered <- list.files(
-        directory,
-        pattern = paste0("^libboost_", name, ".*\\.(a|so|dylib)$"),
-        full.names = TRUE
-      )
-      c(file.path(directory, exact), sort(discovered))
-    }
-  ), use.names = FALSE)
-  candidates <- unique(candidates[file.exists(candidates)])
-  if (!length(candidates)) stop("Boost library was not found: ", name)
-  normalizePath(candidates[[1L]], winslash = "/", mustWork = TRUE)
+  path <- file.path(boost_root, "lib", paste0("libboost_", name, ".a"))
+  if (!file.exists(path)) stop("pinned Boost library was not built: ", name)
+  normalizePath(path, winslash = "/", mustWork = TRUE)
 }
 
 make_escape <- function(value) {
@@ -151,7 +105,7 @@ values <- c(
   LDFLAG = paste(r_config("LDFLAGS", optional = TRUE), "-s"),
   HTSLIB_CPPFLAGS = htslib$cppflags,
   HTSLIB_LIB = htslib$ldflags,
-  BOOST_CPPFLAGS = paste0("-I", shell_path(boost_include)),
+  BOOST_CPPFLAGS = paste0("-I", shell_path(boost_source)),
   SIMDE_CPPFLAGS = paste0("-I", shell_path(simde_include)),
   BOOST_LIB_IO = shell_path(boost_library("iostreams")),
   BOOST_LIB_PO = shell_path(boost_library("program_options")),

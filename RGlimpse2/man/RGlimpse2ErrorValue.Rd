@@ -11,21 +11,27 @@ RGlimpse2ErrorValue(
   message = character(0),
   code = character(0),
   details = list(),
-  source = NULL
+  source = NULL,
+  operation = character(0),
+  status = integer(0)
 )
 
 RGlimpse2InputErrorValue(
   message = character(0),
   code = character(0),
   details = list(),
-  source = NULL
+  source = NULL,
+  operation = character(0),
+  status = integer(0)
 )
 
 RGlimpse2OutputErrorValue(
   message = character(0),
   code = character(0),
   details = list(),
-  source = NULL
+  source = NULL,
+  operation = character(0),
+  status = integer(0)
 )
 
 RGlimpse2ProcessErrorValue(
@@ -46,9 +52,9 @@ RGlimpse2ProcessErrorValue(
 
 \item{source}{Optional source condition or backend value.}
 
-\item{operation}{Stable child-process operation identifier.}
+\item{operation}{Empty or one stable child-process operation identifier.}
 
-\item{status}{Child-process exit status when available.}
+\item{status}{Empty or one child-process exit status.}
 }
 \description{
 Invalid calls signal \code{rglimpse2_contract_violation()} conditions. Expected missing

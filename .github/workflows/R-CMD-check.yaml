@@ -36,19 +36,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libboost-iostreams-dev \
-            libboost-program-options-dev \
-            libboost-serialization-dev \
             libbz2-dev \
             libcurl4-openssl-dev \
             libdeflate-dev \
             liblzma-dev \
             libssl-dev \
             zlib1g-dev
-
-      - name: Install macOS native dependencies
-        if: runner.os == 'macOS'
-        run: brew install boost
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -87,6 +80,7 @@ jobs:
         run: |
           patches/check.sh
           Rscript RGlimpse2/tools/check-source-archive.R
+          Rscript RGlimpse2/tools/check-boost-source.R
           Rscript RGlimpse2/tools/check-genetic-maps.R
           Rscript RGlimpse2/tools/check-tiny-imputation-targets.R
 
@@ -99,10 +93,7 @@ jobs:
           R CMD config CXX17
           R CMD config CXX17STD || true
           R CMD config CXX17FLAGS
-          R CMD config LOCAL_SOFT
-          local_soft=$(R CMD config LOCAL_SOFT)
-          find "$local_soft/lib" -maxdepth 1 \
-            -name 'libboost_*-mt-*.a' -print | sort
+          Rscript RGlimpse2/tools/check-boost-source.R
 
       - uses: r-lib/actions/check-r-package@v2
         with:

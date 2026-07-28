@@ -25,6 +25,11 @@ Authors@R: c(
       family = "Nemerson",
       role = "cph",
       comment = "SIMDe copyright holder"
+    ),
+    person(
+      given = "Boost Software Authors",
+      role = c("ctb", "cph"),
+      comment = "Boost C++ Libraries authors and copyright holders"
     )
   )
 Description: Builds the pinned in-tree 'GLIMPSE2' chromosome chunking,
@@ -42,7 +47,7 @@ Depends:
     R (>= 4.4.0)
 Imports:
     processx (>= 3.8.0),
-    Rduckhts (>= 1.5.1-0.1.1),
+    Rduckhts (>= 1.5.1.9000-0.1.5),
     S7 (>= 0.2.2)
 Suggests:
     DBI,
@@ -51,8 +56,7 @@ Suggests:
     tinytest,
     vcfppR
 VignetteBuilder: knitr
-SystemRequirements: GNU make, a C++17 compiler, Boost iostreams,
-    program_options and serialization libraries, zlib, libbz2, liblzma,
+SystemRequirements: GNU make, a C++17 compiler, zlib, libbz2, liblzma,
     libcurl, OpenSSL and libdeflate
 Additional_repositories: https://rgenomicsetl.r-universe.dev
 URL: https://github.com/RGenomicsETL/RGlimpse2,

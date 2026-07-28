@@ -40,6 +40,7 @@ Other contributors:
   \item Simone Rubinacci (GLIMPSE2 upstream implementation) [contributor, copyright holder]
   \item Olivier Delaneau (GLIMPSE2 upstream implementation) [contributor, copyright holder]
   \item Evan Nemerson (SIMDe copyright holder) [copyright holder]
+  \item Boost Software Authors (Boost C++ Libraries authors and copyright holders) [contributor, copyright holder]
 }
 
 }

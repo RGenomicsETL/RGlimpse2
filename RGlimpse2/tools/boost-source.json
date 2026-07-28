@@ -1,0 +1,20 @@
+{
+  "name": "Boost C++ Libraries",
+  "version": "1.90.0",
+  "source_url": "https://archives.boost.io/release/1.90.0/source/boost_1_90_0.tar.gz",
+  "source_sha256": "5e93d582aff26868d581a52ae78c7d8edf3f3064742c6e77901a1f18a437eea9",
+  "archive": "tools/boost-source.tar.xz",
+  "archive_sha256": "9a81f2472ba5b8c02bd180f2cf8aefb470bead993b9cd34f0585fb176d906e43",
+  "archive_mtime": "2026-07-27 00:00:00 UTC",
+  "file_manifest": "tools/boost-files.sha256",
+  "bcp_version": "1.83.0",
+  "bcp_components": [
+    "iostreams",
+    "program_options",
+    "serialization",
+    "align",
+    "uuid"
+  ],
+  "contents": "The bcp-derived transitive header closure plus the exact iostreams, program_options, and serialization source directories and Boost Software License 1.0.",
+  "license": "Boost Software License 1.0"
+}

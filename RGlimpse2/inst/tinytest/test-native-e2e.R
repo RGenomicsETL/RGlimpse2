@@ -1,3 +1,7 @@
+if (grepl("wasm|emscripten", R.version$platform, ignore.case = TRUE)) {
+  exit_file("GLIMPSE2 child processes are unavailable on WebAssembly")
+}
+
 if (!requireNamespace("vcfppR", quietly = TRUE)) {
   exit_file("vcfppR is required for real BCF output validation")
 }

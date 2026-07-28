@@ -23,6 +23,7 @@ tiny-data-audit:
 source-audit: genetic-map-audit
 	../patches/check.sh
 	Rscript tools/check-source-archive.R
+	Rscript tools/check-boost-source.R
 
 assembly-audit: install
 	tools/check-phase-assembly.sh "$$(Rscript -e 'cat(system.file("glimpse2", "bin", package = "$(PKGNAME)"))')" /usr/bin/objdump

@@ -19,6 +19,19 @@
   }
 )
 
+.rgl_optional_id <- S7::new_property(
+  class = S7::class_character,
+  validator = function(value) {
+    if (
+      length(value) > 1L || anyNA(value) ||
+        (length(value) == 1L &&
+          !grepl("^[A-Za-z0-9][A-Za-z0-9._-]*$", value))
+    ) {
+      "must be empty or one stable identifier"
+    }
+  }
+)
+
 .rgl_nonnegative_integer <- S7::new_property(
   class = S7::class_integer,
   validator = function(value) {

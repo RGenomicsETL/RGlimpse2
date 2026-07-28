@@ -35,6 +35,16 @@ from the GLIMPSE2 upstream submodule are included in RGlimpse2's generated
 native-source archive and remain under SIMDe's MIT licence. RGlimpse2 does not
 load a SIMDe runtime library.
 
+Boost C++ Libraries
+===================
+
+The build-only Boost 1.90.0 header closure and iostreams, program_options, and
+serialization sources are copyright their respective authors and distributed
+under the Boost Software License 1.0. They are compiled into the packaged
+GLIMPSE2 child executables and are not exposed as an R native API. Exact source
+and subset provenance is recorded in tools/boost-source.json in the source
+package.
+
 htslib
 ======
 
