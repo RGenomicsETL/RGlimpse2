@@ -122,6 +122,29 @@ imputed <- rglimpse2_phase_bam(
 )
 ```
 
+Several samples, including mixed haploid and diploid samples, can be passed to
+one native phase process without writing an intermediate likelihood file:
+
+```{r direct-bam-cohort}
+alignments <- data.frame(
+  input_bam = c("/data/sample-male.bam", "/data/sample-female.bam"),
+  input_index = c(
+    "/data/sample-male.bam.bai",
+    "/data/sample-female.bam.bai"
+  ),
+  sample_name = c("sample-male", "sample-female"),
+  sample_ploidy = c(1L, 2L)
+)
+
+imputed_cohort <- rglimpse2_phase_bams(
+  alignments = alignments,
+  reference_bin = "/reference/chrX_3000000_7000000.bin",
+  output_bcf = "/work/cohort.chrX.01.bcf",
+  executable = executables@phase,
+  seed = 20260728L
+)
+```
+
 CRAM input additionally requires an explicit reference FASTA and its adjacent
 `.fai`. SNP likelihoods are called directly from the alignment by default;
 `call_indels = TRUE` enables the GLIMPSE2 indel calling model.

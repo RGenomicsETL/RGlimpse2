@@ -2,6 +2,11 @@
 
 - Add `rglimpse2_phase_bam()` for deterministic direct phasing and imputation
   from one explicitly indexed BAM or CRAM.
+- Add `rglimpse2_phase_bams()` for one native multi-sample
+  `GLIMPSE2_phase --bam-list` call with explicit indexed alignments, sample
+  names, and mixed haploid/diploid ploidy. Private BAM/ploidy tables are
+  removed after the call, and the BCF is published without replacement only
+  after successful staging.
 
 - The R package interface is now distributed under GPL-2 or later; bundled
   upstream components retain their original licences and notices.
