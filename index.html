@@ -156,14 +156,33 @@
 <span>  sample_name <span class="op">=</span> <span class="st">"sample"</span>,</span>
 <span>  sample_ploidy <span class="op">=</span> <span class="fl">2L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>CRAM input additionally requires an explicit reference FASTA and its adjacent <code>.fai</code>. SNP likelihoods are called directly from the alignment by default; <code>call_indels = TRUE</code> enables the GLIMPSE2 indel calling model.</p>
-<p>The split-reference, phase, and ligate wrappers follow the same contract. They do not search <code>PATH</code>, overwrite an output, build shell command strings, or retain workflow state. Invalid calls signal typed <code>rglimpse2_contract_violation</code> conditions; expected operational failures are returned as typed S7 error values.</p>
+<p>Several samples, including mixed haploid and diploid samples, can be passed to one native phase process without writing an intermediate likelihood file:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">alignments</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  input_bam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/data/sample-male.bam"</span>, <span class="st">"/data/sample-female.bam"</span><span class="op">)</span>,</span>
+<span>  input_index <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"/data/sample-male.bam.bai"</span>,</span>
+<span>    <span class="st">"/data/sample-female.bam.bai"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  sample_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sample-male"</span>, <span class="st">"sample-female"</span><span class="op">)</span>,</span>
+<span>  sample_ploidy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">imputed_cohort</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_phase_bams.html">rglimpse2_phase_bams</a></span><span class="op">(</span></span>
+<span>  alignments <span class="op">=</span> <span class="va">alignments</span>,</span>
+<span>  reference_bin <span class="op">=</span> <span class="st">"/reference/chrX_3000000_7000000.bin"</span>,</span>
+<span>  output_bcf <span class="op">=</span> <span class="st">"/work/cohort.chrX.01.bcf"</span>,</span>
+<span>  executable <span class="op">=</span> <span class="va">executables</span><span class="op">@</span><span class="va">phase</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">20260728L</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>CRAM input additionally requires an explicit reference FASTA and its adjacent <code>.fai</code>. SNP likelihoods are called directly from the alignment by default; <code>call_indels = TRUE</code> enables the GLIMPSE2 indel calling model. Biallelic symbolic and other non-observable reference alleles remain in the haplotype scaffold with flat read likelihoods.</p>
+<p>The split-reference, phase, and ligate wrappers follow the same contract. They do not search <code>PATH</code>, overwrite an output, build shell command strings, or retain workflow state. Invalid calls signal typed <code>rglimpse2_contract_violation</code> conditions; expected operational failures are returned as typed S7 error values. Split-reference rejects unsplit records with more or fewer than two alleles in the requested input region before starting the native process; reference preparation owns deterministic multiallelic decomposition.</p>
 </div>
 <div class="section level2">
 <h2 id="one-htslib-authority">One htslib authority<a class="anchor" aria-label="anchor" href="#one-htslib-authority"></a>
 </h2>
 <p>The package does not vendor or discover another htslib. During configuration it requires:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">Rduckhts</span><span class="fu">::</span><span class="fu"><a href="https://rgenomicsetl.r-universe.dev/Rduckhts/reference/rduckhts_htslib_config.html" class="external-link">rduckhts_htslib_config</a></span><span class="op">(</span>validate <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>Every executable is built with the returned headers and exact library contract. Runtime executable discovery revalidates the packaged build version against the htslib version supplied and loaded by <code>Rduckhts</code>.</p>
 </div>
@@ -176,7 +195,7 @@
 <li>ARM: scalar SIMDe and NEON.</li>
 </ul>
 <p>A baseline C probe checks CPU features and operating-system vector state before <code>"auto"</code> selects a binary. Explicit backend selection supports conformance and reproducibility testing without process-global dispatch state.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/rglimpse2_simd_info.html">rglimpse2_simd_info</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">scalar</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rglimpse2_executables.html">rglimpse2_executables</a></span><span class="op">(</span>phase_backend <span class="op">=</span> <span class="st">"scalar"</span><span class="op">)</span></span></code></pre></div>
 <p>The native tests run all four packaged GLIMPSE2 programs against eight tiny <code>vcfppR</code>-generated and <code>Rduckhts</code>-indexed BCF reference/target pairs. They cover <code>1</code>/<code>chr1</code>, <code>Y</code>/<code>chrY</code>, and <code>M</code>/<code>MT</code>/<code>chrM</code>/<code>chrMT</code>, including haploid Y and mitochondrial targets, and require identical fixed-seed phase records from every runtime-supported backend. No executable test doubles are used.</p>
@@ -185,8 +204,8 @@
 <h2 id="building-this-fork">Building this fork<a class="anchor" aria-label="anchor" href="#building-this-fork"></a>
 </h2>
 <p>The upstream GLIMPSE2 tree remains the repository root. The R package is nested under <code>RGlimpse2/</code>:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">make</span> r-package-bootstrap</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">make</span> r-package-check</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">make</span> r-package-bootstrap</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">make</span> r-package-check</span></code></pre></div>
 <p>Reference-panel copying evidence is an inference diagnostic. <code>RGlimpse2</code> does not call it local ancestry; that claim requires a separately calibrated and validated decoder.</p>
 </div>
 </div>

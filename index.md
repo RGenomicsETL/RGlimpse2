@@ -109,16 +109,45 @@ imputed <- rglimpse2_phase_bam(
 )
 ```
 
+Several samples, including mixed haploid and diploid samples, can be
+passed to one native phase process without writing an intermediate
+likelihood file:
+
+``` r
+
+alignments <- data.frame(
+  input_bam = c("/data/sample-male.bam", "/data/sample-female.bam"),
+  input_index = c(
+    "/data/sample-male.bam.bai",
+    "/data/sample-female.bam.bai"
+  ),
+  sample_name = c("sample-male", "sample-female"),
+  sample_ploidy = c(1L, 2L)
+)
+
+imputed_cohort <- rglimpse2_phase_bams(
+  alignments = alignments,
+  reference_bin = "/reference/chrX_3000000_7000000.bin",
+  output_bcf = "/work/cohort.chrX.01.bcf",
+  executable = executables@phase,
+  seed = 20260728L
+)
+```
+
 CRAM input additionally requires an explicit reference FASTA and its
 adjacent `.fai`. SNP likelihoods are called directly from the alignment
 by default; `call_indels = TRUE` enables the GLIMPSE2 indel calling
-model.
+model. Biallelic symbolic and other non-observable reference alleles
+remain in the haplotype scaffold with flat read likelihoods.
 
 The split-reference, phase, and ligate wrappers follow the same
 contract. They do not search `PATH`, overwrite an output, build shell
 command strings, or retain workflow state. Invalid calls signal typed
 `rglimpse2_contract_violation` conditions; expected operational failures
-are returned as typed S7 error values.
+are returned as typed S7 error values. Split-reference rejects unsplit
+records with more or fewer than two alleles in the requested input
+region before starting the native process; reference preparation owns
+deterministic multiallelic decomposition.
 
 ## One htslib authority
 
