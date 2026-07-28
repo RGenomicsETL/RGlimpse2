@@ -2,3 +2,4 @@
 0002-port-phase-hmms-to-explicit-simde.patch
 0003-use-portable-reference-environment-setup.patch
 0004-handle-zero-span-genetic-maps.patch
+0005-keep-symbolic-direct-bam-likelihoods-flat.patch

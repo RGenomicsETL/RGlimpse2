@@ -135,13 +135,17 @@ imputed_cohort <- rglimpse2_phase_bams(
 CRAM input additionally requires an explicit reference FASTA and its
 adjacent `.fai`. SNP likelihoods are called directly from the alignment
 by default; `call_indels = TRUE` enables the GLIMPSE2 indel calling
-model.
+model. Biallelic symbolic and other non-observable reference alleles
+remain in the haplotype scaffold with flat read likelihoods.
 
 The split-reference, phase, and ligate wrappers follow the same
 contract. They do not search `PATH`, overwrite an output, build shell
 command strings, or retain workflow state. Invalid calls signal typed
 `rglimpse2_contract_violation` conditions; expected operational failures
-are returned as typed S7 error values.
+are returned as typed S7 error values. Split-reference rejects unsplit
+records with more or fewer than two alleles in the requested input
+region before starting the native process; reference preparation owns
+deterministic multiallelic decomposition.
 
 ## One htslib authority
 

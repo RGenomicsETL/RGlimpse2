@@ -255,11 +255,22 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
 		{
 
 			const variant * variant_site = V.vec_pos[i_site];
+			const bool is_snp = variant_site->type == VCF_SNP;
 			const bool is_indel = variant_site->type == VCF_INDEL;
 			const bool is_delet = is_indel ? variant_site->alt.size() == 1 : 0;
 
-			group_reads[is_indel + is_delet] (caller, variant_site);
-			compute_llk[is_indel] (caller, variant_site);
+			if (is_snp || is_indel)
+			{
+				group_reads[is_indel + is_delet] (caller, variant_site);
+				compute_llk[is_indel] (caller, variant_site);
+			}
+			else
+			{
+				// Keep any same-position SNP pileup cached, but give this site flat GLs.
+				caller.gls.dp_ind = 0;
+				caller.gls.ref_read = 0;
+				std::fill(caller.gls.llk.begin(), caller.gls.llk.end(), 0.0f);
+			}
 			if (caller.gls.dp_ind > 0)
 			{
 				int max_llk = 0;
@@ -271,7 +282,7 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
 			++G.stats.depth_count[i][caller.gls.dp_ind];
 			G.stats.cov_ind[i].push(caller.gls.dp_ind);
 
-			caller.snp_called = !is_indel;
+			if (is_snp || is_indel) caller.snp_called = is_snp;
 			++i_site;
 		}
 	}

@@ -7,6 +7,12 @@
   names, and mixed haploid/diploid ploidy. Private BAM/ploidy tables are
   removed after the call, and the BCF is published without replacement only
   after successful staging.
+- Make `rglimpse2_split_reference()` return a typed
+  `non_biallelic_reference` input error before starting GLIMPSE2 when the
+  requested reference region contains unsplit records.
+- Keep biallelic symbolic and other non-observable reference variants in
+  direct-BAM imputation with flat read likelihoods instead of routing them
+  through the SNP caller.
 
 - The R package interface is now distributed under GPL-2 or later; bundled
   upstream components retain their original licences and notices.

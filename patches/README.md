@@ -11,7 +11,16 @@ The patches in [`series`](series) are applied in order:
 1. downstream native-build hooks and executable suffix support;
 2. the mechanical port of phase HMM intrinsics to explicit pinned SIMDe APIs;
 3. portable reference-environment setup on Windows;
-4. safe PBWT grouping for zero-span Y non-PAR and mitochondrial maps.
+4. safe PBWT grouping for zero-span Y non-PAR and mitochondrial maps;
+5. flat direct-alignment likelihoods for symbolic and other non-observable
+   biallelic reference variants.
+
+The fifth patch keeps those variants in the haplotype scaffold while preventing
+read bases from being interpreted as likelihoods for an allele that the
+SNP/indel caller cannot observe. They are therefore imputed from surrounding
+SNP-anchored haplotype copying, consistent with the GLIMPSE structural-variant
+imputation design described in
+[PMC11951665](https://pmc.ncbi.nlm.nih.gov/articles/PMC11951665/).
 
 The R package source archive is generated from the resulting patched tree. It
 also contains the pinned SIMDe headers, but not this maintenance ledger.

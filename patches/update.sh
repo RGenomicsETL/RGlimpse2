@@ -41,5 +41,7 @@ write_patch 0003-use-portable-reference-environment-setup.patch \
   phase/src/caller/caller_initialise.cpp
 write_patch 0004-handle-zero-span-genetic-maps.patch \
   phase/src/containers/haplotype_set.cpp
+write_patch 0005-keep-symbolic-direct-bam-likelihoods-flat.patch \
+  phase/src/io/genotype_bam_caller.cpp
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

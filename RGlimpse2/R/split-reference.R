@@ -1,7 +1,10 @@
 #' Build one GLIMPSE2 binary reference chunk
 #'
 #' Invokes `GLIMPSE2_split_reference` once. `output_region` must be contained
-#' within `input_region`; both regions must name the same contig.
+#' within `input_region`; both regions must name the same contig. Before the
+#' child process starts, RGlimpse2 scans the requested reference region and
+#' rejects records whose allele count is not exactly two. Reference preparation
+#' must split or otherwise resolve multiallelic records before this call.
 #'
 #' @param reference_bcf Absolute phased reference VCF/BCF path.
 #' @param input_region Buffered region in `contig:start-end` form.
@@ -85,6 +88,14 @@ rglimpse2_split_reference <- function(
         return(ready)
       }
 
+      reference_variants <- .rgl_require_biallelic_reference_region(
+        reference_bcf,
+        input_region
+      )
+      if (rglimpse2_is_error(reference_variants)) {
+        return(reference_variants)
+      }
+
       arguments <- c(
         "--reference", reference_bcf,
         "--map", genetic_map,
@@ -99,5 +110,85 @@ rglimpse2_split_reference <- function(
       )
       .rgl_run_process("split_reference", executable, arguments, outputs)
     }
+  )
+}
+
+.rgl_require_biallelic_reference_region <- function(
+  reference_bcf,
+  input_region
+) {
+  connection <- NULL
+  invalid <- tryCatch(
+    {
+      connection <- Rduckhts::rduckhts_connect()
+      Rduckhts::rduckhts_bcf(
+        con = connection,
+        table_name = NULL,
+        path = reference_bcf,
+        region = input_region,
+        scan_mode = "auto",
+        decompression_threads = 0L,
+        decode_error_policy = "error"
+      )
+      DBI::dbGetQuery(
+        connection,
+        paste(
+          "WITH invalid AS (",
+          "  SELECT CHROM AS chrom, POS AS pos, REF AS ref,",
+          "    array_to_string(ALT, ',') AS alt",
+          "  FROM bcf_data",
+          "  WHERE ALT IS NULL OR coalesce(array_length(ALT), 0) <> 1",
+          ")",
+          "SELECT chrom, pos, ref, alt, count(*) OVER () AS invalid_count",
+          "FROM invalid",
+          "ORDER BY chrom, pos",
+          "LIMIT 20"
+        )
+      )
+    },
+    error = identity
+  )
+  if (!is.null(connection)) {
+    try(DBI::dbDisconnect(connection, shutdown = TRUE), silent = TRUE)
+  }
+  if (inherits(invalid, "error")) {
+    return(rglimpse2_error_value(
+      message = paste0(
+        "could not inspect reference_bcf variants in ",
+        input_region,
+        ": ",
+        conditionMessage(invalid)
+      ),
+      kind = "input",
+      code = "reference_variant_scan_failed",
+      details = list(
+        argument = "reference_bcf",
+        path = reference_bcf,
+        input_region = input_region
+      ),
+      source = invalid
+    ))
+  }
+  if (!nrow(invalid)) {
+    return(invisible(TRUE))
+  }
+
+  invalid_count <- as.numeric(invalid$invalid_count[[1L]])
+  rglimpse2_error_value(
+    message = paste0(
+      "reference_bcf contains ",
+      invalid_count,
+      " record(s) with n_allele != 2 in ",
+      input_region
+    ),
+    kind = "input",
+    code = "non_biallelic_reference",
+    details = list(
+      argument = "reference_bcf",
+      path = reference_bcf,
+      input_region = input_region,
+      invalid_count = invalid_count,
+      examples = invalid[c("chrom", "pos", "ref", "alt")]
+    )
   )
 }

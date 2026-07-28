@@ -46,11 +46,11 @@ Language: en-US
 Depends:
     R (>= 4.4.0)
 Imports:
+    DBI,
     processx (>= 3.8.0),
     Rduckhts (>= 1.5.1.9000-0.1.5),
     S7 (>= 0.2.2)
 Suggests:
-    DBI,
     knitr,
     rmarkdown,
     tinytest,
