@@ -49,5 +49,8 @@ records.}
 }
 \description{
 Invokes \code{GLIMPSE2_split_reference} once. \code{output_region} must be contained
-within \code{input_region}; both regions must name the same contig.
+within \code{input_region}; both regions must name the same contig. Before the
+child process starts, RGlimpse2 scans the requested reference region and
+rejects records whose allele count is not exactly two. Reference preparation
+must split or otherwise resolve multiallelic records before this call.
 }

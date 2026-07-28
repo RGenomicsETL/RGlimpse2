@@ -1,0 +1,3 @@
+pos chr cM
+900 chr11 0
+1600 chr11 0.01
