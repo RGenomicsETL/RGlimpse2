@@ -1,6 +1,6 @@
 Package: RGlimpse2
 Title: An 'R' Wrapper for 'GLIMPSE2' Low-Coverage Sequencing Imputation and Phasing
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: c(
     person(
       given = c("Sounkou", "Mahamane"),

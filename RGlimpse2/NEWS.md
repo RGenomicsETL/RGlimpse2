@@ -1,4 +1,4 @@
-# RGlimpse2 0.0.0.9000
+# RGlimpse2 0.0.0.9001
 
 - Add `rglimpse2_phase_bam()` for deterministic direct phasing and imputation
   from one explicitly indexed BAM or CRAM.
