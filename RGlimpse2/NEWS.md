@@ -1,3 +1,8 @@
+# RGlimpse2 0.0.0.9003
+
+- Include the pthread header directly in threaded native callers so Rtools
+  ARM64 builds do not depend on a transitive header.
+
 # RGlimpse2 0.0.0.9002
 
 - Preserve biallelic symbolic and ambiguous reference records during direct-BAM
