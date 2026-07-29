@@ -1,0 +1,24 @@
+diff --git a/phase/src/caller/caller_header.h b/phase/src/caller/caller_header.h
+index 9bae0fe..316fd49 100644
+--- a/phase/src/caller/caller_header.h
++++ b/phase/src/caller/caller_header.h
+@@ -28,6 +28,7 @@
+ 
+ #include <utils/otools.h>
+ #include <utils/checksum_utils.h>
++#include <pthread.h>
+ 
+ #include <containers/genotype_set.h>
+ #include <containers/haplotype_set.h>
+diff --git a/split_reference/src/caller/caller_header.h b/split_reference/src/caller/caller_header.h
+index 455912e..2dac6c6 100644
+--- a/split_reference/src/caller/caller_header.h
++++ b/split_reference/src/caller/caller_header.h
+@@ -27,6 +27,7 @@
+ #define _CALLER_H
+ 
+ #include <utils/otools.h>
++#include <pthread.h>
+ 
+ #include <containers/variant_map.h>
+ #include <io/ref_genotype_reader.h>

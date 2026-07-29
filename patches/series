@@ -4,3 +4,4 @@
 0004-handle-zero-span-genetic-maps.patch
 0005-keep-symbolic-direct-bam-likelihoods-flat.patch
 0006-ligate-all-haploid-overlaps-safely.patch
+0007-include-pthread-header-in-threaded-callers.patch

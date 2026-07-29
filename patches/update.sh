@@ -47,5 +47,8 @@ write_patch 0005-keep-symbolic-direct-bam-likelihoods-flat.patch \
 write_patch 0006-ligate-all-haploid-overlaps-safely.patch \
   ligate/src/ligater/ligater_algorithm.cpp \
   ligate/src/ligater/ligater_header.h
+write_patch 0007-include-pthread-header-in-threaded-callers.patch \
+  phase/src/caller/caller_header.h \
+  split_reference/src/caller/caller_header.h
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

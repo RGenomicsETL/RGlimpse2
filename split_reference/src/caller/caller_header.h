@@ -27,6 +27,7 @@
 #define _CALLER_H
 
 #include <utils/otools.h>
+#include <pthread.h>
 
 #include <containers/variant_map.h>
 #include <io/ref_genotype_reader.h>

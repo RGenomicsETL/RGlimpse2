@@ -28,6 +28,7 @@
 
 #include <utils/otools.h>
 #include <utils/checksum_utils.h>
+#include <pthread.h>
 
 #include <containers/genotype_set.h>
 #include <containers/haplotype_set.h>

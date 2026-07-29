@@ -15,7 +15,9 @@ The patches in [`series`](series) are applied in order:
 5. flat direct-alignment likelihoods for symbolic and other non-observable
    decomposed single-ALT reference records; and
 6. genotype-stride-aware overlap processing for cohorts whose ligated chunks
-   contain only haploid samples.
+   contain only haploid samples; and
+7. direct pthread declarations in the threaded phase and reference-splitting
+   callers.
 
 `Single-ALT` describes the representation consumed by GLIMPSE2. A multiallelic
 source site must be decomposed into one record per ALT before reference splitting;
