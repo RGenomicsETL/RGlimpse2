@@ -1,0 +1,1152 @@
+diff --git a/common/src/containers/bitmatrix.h b/common/src/containers/bitmatrix.h
+index 913a12f..058a8d8 100644
+--- a/common/src/containers/bitmatrix.h
++++ b/common/src/containers/bitmatrix.h
+@@ -27,6 +27,8 @@
+ #define _BITMATRIX_H
+ 
+ #include <cstdlib>
++#include <cstdint>
++#include <climits>
+ #include <utils/otools.h>
+ #include <utils/checksum_utils.h>
+ #include "boost/serialization/serialization.hpp"
+@@ -37,6 +39,19 @@ inline static unsigned int abracadabra(const unsigned int &i1, const unsigned in
+ 	return static_cast<unsigned int>((static_cast<unsigned long int>(i1) * static_cast<unsigned long int>(i2)) >> 32);
+ }
+ 
++
++//8x8 bit-block transpose for MSB-first bytes: in[i] bit (7-j) == out[j] bit (7-i).
++static_assert(CHAR_BIT == 8, "bitmatrix packs 8 columns per byte");
++inline static void bitmatrix_transpose8x8(const unsigned char in[8], unsigned char out[8]) {
++	std::uint64_t x = 0;
++	for (int i = 0 ; i < 8 ; i ++) x = (x << 8) | in[i];
++	std::uint64_t t;
++	t = (x ^ (x >> 7)) & 0x00AA00AA00AA00AAULL; x = x ^ t ^ (t << 7);
++	t = (x ^ (x >> 14)) & 0x0000CCCC0000CCCCULL; x = x ^ t ^ (t << 14);
++	t = (x ^ (x >> 28)) & 0x00000000F0F0F0F0ULL; x = x ^ t ^ (t << 28);
++	for (int j = 0 ; j < 8 ; j ++) out[j] = (unsigned char)(x >> (8 * (7 - j)));
++}
++
+ class bitmatrix
+ {
+ public:
+diff --git a/common/src/containers/ref_haplotype_set.cpp b/common/src/containers/ref_haplotype_set.cpp
+index fa419f7..3f39955 100644
+--- a/common/src/containers/ref_haplotype_set.cpp
++++ b/common/src/containers/ref_haplotype_set.cpp
+@@ -44,6 +44,42 @@ void ref_haplotype_set::allocate()
+ 	ShapRef = std::vector < std::vector < int > > (n_ref_haps);
+ }
+ 
++
++//Haplotype-major copy of the common-site panel. conditioning_set builds its
++//site-major Hvar for the selected states by transposing whole rows of this
++//copy: K sequential row reads and an 8x8 bit transpose per block, instead of
++//one random bit read per (site, state). It holds a second copy of the
++//common-site panel (n_ref_haps x n_com_sites bits), built once at load and
++//neither serialized nor checksummed.
++void ref_haplotype_set::buildHapMajor()
++{
++	tac.clock();
++	HhapRef.allocate(n_ref_haps, n_com_sites);
++	const size_t srcRowB = HvarRef.n_cols / 8;
++	const size_t dstRowB = HhapRef.n_cols / 8;
++	const unsigned int n_site_blocks = (n_com_sites + 7) / 8;
++	const unsigned int n_hap_bytes = (n_ref_haps + 7) / 8;
++	unsigned char in[8], out[8];
++	for (unsigned int hb = 0 ; hb < n_hap_bytes ; hb ++)
++	{
++		for (unsigned int sb = 0 ; sb < n_site_blocks ; sb ++)
++		{
++			for (int i = 0 ; i < 8 ; i ++)
++			{
++				const unsigned int site = 8 * sb + i;
++				in[i] = (site < n_com_sites) ? HvarRef.bytes[(size_t)site * srcRowB + hb] : 0;
++			}
++			bitmatrix_transpose8x8(in, out);
++			for (int b = 0 ; b < 8 ; b ++)
++			{
++				const unsigned int hap = 8 * hb + b;
++				if (hap < n_ref_haps) HhapRef.bytes[(size_t)hap * dstRowB + sb] = out[b];
++			}
++		}
++	}
++	vrb.bullet("Haplotype-major panel copy [" + stb.str(HhapRef.n_bytes / (1024 * 1024)) + " Mb] (" + stb.str(tac.rel_time()*1.0/1000, 2) + "s)");
++}
++
+ void ref_haplotype_set::build_sparsePBWT(const variant_map & M)
+ {
+ 	tac.clock();
+diff --git a/common/src/containers/ref_haplotype_set.h b/common/src/containers/ref_haplotype_set.h
+index 3d5a6b0..4356b5b 100644
+--- a/common/src/containers/ref_haplotype_set.h
++++ b/common/src/containers/ref_haplotype_set.h
+@@ -119,6 +119,7 @@ public:
+ 	std::vector < std::vector < int > > ShapRef;				// Rare alleles per haplotype
+ 	std::vector < std::vector <int> > SvarRef;
+ 	bitmatrix HvarRef;								// Bitmatrix of haplotypes, variant first / transpose of Hhap;
++	bitmatrix HhapRef;								// Haplotype-major copy of HvarRef [rows = haplotypes, cols = common sites]; built at load, not serialized
+ 
+ 	std::vector < unsigned char > Ypacked;
+ 	std::vector < std::vector <int > > A_small_idx;
+@@ -134,6 +135,7 @@ public:
+ 	virtual ~ref_haplotype_set();
+ 
+ 	void allocate();
++	void buildHapMajor();
+ 	void build_sparsePBWT(const variant_map & M);
+ 	void update_full_pbwt_ay(const int ref_rac_l, const int l, std::vector<int>& pbwt_ref_idx);
+ 	void update_small_pbwt_ay(const int ref_rac_l, std::vector<bool> rare_small_haps);
+diff --git a/phase/src/caller/caller_initialise.cpp b/phase/src/caller/caller_initialise.cpp
+index b718bd4..b5c3134 100644
+--- a/phase/src/caller/caller_initialise.cpp
++++ b/phase/src/caller/caller_initialise.cpp
+@@ -125,6 +125,7 @@ void caller::read_files_and_initialise() {
+ 		else vrb.error("No valid input options (input-gl / bam-list / bam)");
+ 	}
+ 	H.transposeRareRef();
++	H.buildHapMajor();
+ 
+ 	//step3: Read and initialise genetic map
+ 	if (input_fmt == InputFormat::BCF)
+@@ -184,7 +185,17 @@ bool caller::read_binary_reference_panel(const std::string& reference_filename,
+ 	//common case (a missing or mistyped --reference path) retrying just delays the
+ 	//failure, so report it precisely and mark it non_retryable to fail fast. Transient
+ 	// localization failures surface later, as read errors during deserialization.
+-	std::ifstream ifs(reference_filename, std::ios::binary | std::ios_base::in);
++	//A large stream buffer lets the deserialisation issue a few multi-megabyte
++	//read calls instead of hundreds of readahead-sized ones per panel, which is
++	//what IOPS-throttled or high-latency storage charges for (measured with
++	//libstdc++; other standard libraries may honour pubsetbuf differently). The
++	//bytes read are unchanged. The buffer is optional: if it cannot be allocated
++	//the stream keeps its default buffer.
++	std::vector < char > iobuf;
++	try { iobuf.resize((size_t)16 << 20); } catch (const std::bad_alloc&) { iobuf.clear(); }
++	std::ifstream ifs;
++	if (!iobuf.empty()) ifs.rdbuf()->pubsetbuf(iobuf.data(), iobuf.size());
++	ifs.open(reference_filename, std::ios::binary | std::ios_base::in);
+ 	if (!ifs.good())
+ 	{
+ 		err_msg = "could not open file (not good(): eofbit, failbit or badbit set, or file not found). Please check the path.";
+diff --git a/phase/src/containers/conditioning_set.cpp b/phase/src/containers/conditioning_set.cpp
+index 5afbc43..6e7e815 100644
+--- a/phase/src/containers/conditioning_set.cpp
++++ b/phase/src/containers/conditioning_set.cpp
+@@ -142,38 +142,21 @@ void conditioning_set::compactSelection(const int ind, const int iter)
+ 		else polymorphic_sites.push_back(l);
+ 	}
+ 
+-	//Build bitmatrix Hvar
++	//Build bitmatrix Hvar: rare rows directly from the sparse carriers, common
++	//rows by transposing the selected rows of the haplotype-major panel copy.
+ 	Hvar.reallocate(polymorphic_sites.size(), n_states);
+-	//Pack 8 selected reference bits per byte and write whole bytes (rather than 8
+-	//read-modify-write set() calls per byte). Profiling showed this loop dominated
+-	//runtime at ~35% of the cycles. The trailing bits when n_states is not a multiple
+-	//of 8 still go through set() to preserve any pre-existing content in the row's
+-	//last byte. Bit ordering matches set(): col 0 -> MSB ... col 7 -> LSB.
+-	const int n_states_full = (n_states / 8) * 8;
+-	for (int labs = 0, lrel = 0, lcom = 0 ; labs < n_tot_sites ; labs ++) {
++	rel_of_com.clear();
++	for (int labs = 0, lrel = 0 ; labs < n_tot_sites ; labs ++) {
+ 		if (var_type[labs] == TYPE_COMMON) {
+-			for (int k = 0 ; k < n_states_full ; k += 8) {
+-				const unsigned char b =
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+0]) << 7) |
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+1]) << 6) |
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+2]) << 5) |
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+3]) << 4) |
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+4]) << 3) |
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+5]) << 2) |
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+6]) << 1) |
+-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+7]) << 0);
+-				Hvar.setByte(lrel, k, b);
+-			}
+-			for (int k = n_states_full ; k < n_states ; k++)
+-				Hvar.set(lrel, k, H.HvarRef.get(lcom, idxHaps_ref[k]));
++			rel_of_com.push_back(lrel);
+ 			lrel++;
+-			lcom++;
+ 		} else if (var_type[labs] == TYPE_RARE) {
+ 			Hvar.set(lrel, major_alleles[labs]);
+ 			for (int r = 0 ; r < Svar[labs].size() ; r++) Hvar.set(lrel, Svar[labs][r], !major_alleles[labs]);
+ 			lrel++;
+ 		} //else mono: do nothing
+ 	}
++	buildCommonRows();
+ 
+ 	//We just rebuilt polymorphic_sites, so any previously computed t/nt are stale.
+ 	//Mark the full-panel cache as valid only if we actually took that path.
+@@ -181,6 +164,39 @@ void conditioning_set::compactSelection(const int ind, const int iter)
+ 	cached_full_panel_n = use_list ? 0 : H.n_ref_haps;
+ }
+ 
++
++//Fill the common-site rows of Hvar for the selected states. Each group of 8
++//states contributes one byte per Hvar row: the 8 haplotype rows are read
++//sequentially from H.HhapRef and transposed 8x8 bits at a time. Sites are
++//processed in tiles so the Hvar rows being written stay in cache. Bit order
++//matches bitmatrix::set(): state k+b -> bit (7-b).
++void conditioning_set::buildCommonRows()
++{
++	const unsigned int n_com = rel_of_com.size();
++	if (n_com == 0) return;
++	const size_t hapRowB = H.HhapRef.n_cols / 8;
++	if (zero_hap_row.size() < hapRowB) zero_hap_row.assign(hapRowB, 0);
++	const unsigned int n_com_bytes = (n_com + 7) / 8;
++	const unsigned int TILE_BYTES = 256;
++	unsigned char in[8], out[8];
++	for (unsigned int j0 = 0 ; j0 < n_com_bytes ; j0 += TILE_BYTES)
++	{
++		const unsigned int j1 = std::min(n_com_bytes, j0 + TILE_BYTES);
++		for (unsigned int k = 0 ; k < n_states ; k += 8)
++		{
++			const unsigned char * hp[8];
++			for (int b = 0 ; b < 8 ; b ++) hp[b] = (k + b < n_states) ? H.HhapRef.bytes + (size_t)idxHaps_ref[k + b] * hapRowB : zero_hap_row.data();
++			for (unsigned int j = j0 ; j < j1 ; j ++)
++			{
++				for (int b = 0 ; b < 8 ; b ++) in[b] = hp[b][j];
++				bitmatrix_transpose8x8(in, out);
++				const unsigned int smax = std::min(8u, n_com - 8 * j);
++				for (unsigned int s = 0 ; s < smax ; s ++) Hvar.setByte(rel_of_com[8 * j + s], k, out[s]);
++			}
++		}
++	}
++}
++
+ void conditioning_set::updateTransitions()
+ {
+ 	if (polymorphic_sites.size() == 0) return;
+diff --git a/phase/src/containers/conditioning_set.h b/phase/src/containers/conditioning_set.h
+index 5e1b758..d1d5c78 100644
+--- a/phase/src/containers/conditioning_set.h
++++ b/phase/src/containers/conditioning_set.h
+@@ -63,6 +63,8 @@ public:
+ 	std::vector < unsigned int > idxHaps_ref;				//Indexes of conditioning_states in ref haplotype_set
+ 	std::vector < std::vector < unsigned int > > Svar;		//Sparse bitmatrix / Variant first
+ 	bitmatrix Hvar;									//Plain bitmatrix / Variant first
++	std::vector < unsigned int > rel_of_com;			//Hvar row of each common site
++	std::vector < unsigned char > zero_hap_row;		//All-zero haplotype row used to pad the last state block
+ 
+ 	//TRANSITION & EMISSION PROBABILITIES
+ 	std::vector < float > t;
+@@ -93,6 +95,7 @@ public:
+ 
+ 	//SELECTION ROUTINES
+ 	void compactSelection(const int ind, const int iter);
++	void buildCommonRows();
+ 	void select(const int ind, const int iter);
+ 
+ 	//UPDATE TRANSITION PROBS
+diff --git a/phase/src/containers/haplotype_set.cpp b/phase/src/containers/haplotype_set.cpp
+index 5028b42..75d9906 100644
+--- a/phase/src/containers/haplotype_set.cpp
++++ b/phase/src/containers/haplotype_set.cpp
+@@ -24,6 +24,7 @@
+  ******************************************************************************/
+ 
+ #include <math.h>
++#include <cstring>
+ #include <containers/haplotype_set.h>
+ #include "boost/serialization/serialization.hpp"
+ #include <boost/archive/tmpdir.hpp>
+@@ -51,6 +52,7 @@ haplotype_set::haplotype_set()
+ 	nstored=0;
+ 	pbwt_depth = 0;
+ 	pbwt_modulo_cm = 0.0f;
++	pbwt_lazy_V = false;
+ 	max_ploidy = 2;
+ 	fploidy=2;
+ 	counter_sel_gf=0;
+@@ -243,7 +245,14 @@ void haplotype_set::allocatePBWT(const int _pbwt_depth, const float _pbwt_modulo
+ 
+ 	pbwt_array_A = std::vector < int > (n_ref_haps);
+ 	pbwt_array_B = std::vector < int > (n_ref_haps);
+-	pbwt_array_V = std::vector < int >(n_ref_haps+1);
++	pbwt_lazy_V = (n_tar_haps <= 16);
++	pbwt_array_V = std::vector < int >(pbwt_lazy_V ? 1 : n_ref_haps+1);
++	if (pbwt_lazy_V)
++	{
++		pbwt_run_start.reserve(n_ref_haps);
++		pbwt_run_ones.reserve(n_ref_haps);
++		pbwt_run_sym.reserve(n_ref_haps);
++	}
+ 	pbwt_index = std::vector < int > (n_tar_haps, 0);
+ 	f_k = std::vector<int>(n_tar_haps, 0);
+ 	g_k = std::vector<int>(n_tar_haps, n_ref_haps);
+@@ -403,6 +412,27 @@ void haplotype_set::read_full_pbwt_av(const unsigned char*& pY, const int ref_ra
+ 	int mm;
+ 	const int size_a = n_ref_haps;
+ 	const std::array<int*,2> occ = {&u,&v};
++	if (pbwt_lazy_V)
++	{
++		pbwt_run_start.clear();
++		pbwt_run_ones.clear();
++		pbwt_run_sym.clear();
++		while (m < size_a)
++		{
++			z = *pY++; //read the encoded symbol
++			n = p3decode[z & 0x7f] ; //get how many chars are encoded
++			mm = m+n; //get limit of this block
++			z >>= 7; //get the symbol itself
++			std::copy(pbwt_array_A.begin()+m, pbwt_array_A.begin()+mm, pbwt_array_B.begin() + *occ[z]); //update B, (next A)
++			pbwt_run_start.push_back(m);
++			pbwt_run_ones.push_back(v-ref_rac_l);
++			pbwt_run_sym.push_back(z);
++			m = mm; //update position in PPA for next loop
++			*occ[z] += n; //update FM
++		}
++		pbwt_array_B.swap(pbwt_array_A); //switch A and B
++		return;
++	}
+ 	pbwt_array_V[0]=0;
+ 	while (m < size_a)
+ 	{
+@@ -451,9 +481,12 @@ void haplotype_set::select_common_pd_fg(const int k, const int l_hq, const int l
+ 		const unsigned char prev_hap = tar_hap[htr];
+ 		tar_hap[htr] = HvarTar.get(l_all,htr);
+ 
+-		idx = tar_hap[htr] * (ref_rac_l + pbwt_array_V[pbwt_index[htr]]) + (1-tar_hap[htr]) * (pbwt_index[htr] - pbwt_array_V[pbwt_index[htr]]);
+-		f_dash = tar_hap[htr] * (ref_rac_l + pbwt_array_V[f_k[htr]]) + (1-tar_hap[htr]) * (f_k[htr] - pbwt_array_V[f_k[htr]]);
+-		g_dash = tar_hap[htr] * (ref_rac_l + pbwt_array_V[g_k[htr]]) + (1-tar_hap[htr]) * (g_k[htr] - pbwt_array_V[g_k[htr]]);
++		const int V_idx = pbwt_V(pbwt_index[htr]);
++		const int V_f = pbwt_V(f_k[htr]);
++		const int V_g = pbwt_V(g_k[htr]);
++		idx = tar_hap[htr] * (ref_rac_l + V_idx) + (1-tar_hap[htr]) * (pbwt_index[htr] - V_idx);
++		f_dash = tar_hap[htr] * (ref_rac_l + V_f) + (1-tar_hap[htr]) * (f_k[htr] - V_f);
++		g_dash = tar_hap[htr] * (ref_rac_l + V_g) + (1-tar_hap[htr]) * (g_k[htr] - V_g);
+ 
+ 		if (g_dash <= f_dash)
+ 		{
+@@ -618,12 +651,25 @@ void haplotype_set::init_common(const int k, const int l, const int prev_ref_rac
+ 		f_k[htr] = f_dash;
+ 		g_k[htr] = g_dash;
+ 	}
+-	std::vector<bool> map_big_small(n_ref_haps, true);
++	//Compact A by dropping the (sorted, distinct) positions in A_small_idx[l] while
++	//keeping the order of the others, then append the small array. Moving the gap
++	//between consecutive dropped positions as one block gives exactly the
++	//element-by-element result of the previous loop without the per-call
++	//std::vector<bool> and the per-element bit test over every haplotype.
+ 	const std::vector<int>& small_idx = A_small_idx[l];
+-	for (int htr=0; htr<small_idx.size(); ++htr) map_big_small[small_idx[htr]] = false;
++	const int n_small = small_idx.size();
+ 	int n_zeros = small_idx[0];
+-	for (int htr=n_zeros+1; htr<n_ref_haps; ++htr)
+-		if (map_big_small[htr]) pbwt_array_A[n_zeros++] = pbwt_array_A[htr];
++	for (int i = 0 ; i < n_small ; ++i)
++	{
++		const int from = small_idx[i] + 1;
++		const int to = (i + 1 < n_small) ? small_idx[i+1] : (int)n_ref_haps;
++		const int len = to - from;
++		if (len > 0)
++		{
++			std::memmove(&pbwt_array_A[n_zeros], &pbwt_array_A[from], (size_t)len * sizeof(int));
++			n_zeros += len;
++		}
++	}
+ 
+ 	for (int htr=0; htr<pbwt_small_A.size(); ++htr,++n_zeros)
+ 		pbwt_array_A[n_zeros]=pbwt_small_A[htr];
+diff --git a/phase/src/containers/haplotype_set.h b/phase/src/containers/haplotype_set.h
+index 3d2f515..8975f4d 100644
+--- a/phase/src/containers/haplotype_set.h
++++ b/phase/src/containers/haplotype_set.h
+@@ -28,6 +28,7 @@
+ 
+ #include <utils/otools.h>
+ #include <utils/checksum_utils.h>
++#include <algorithm>
+ 
+ #include <containers/bitmatrix.h>
+ #include <containers/genotype_set.h>
+@@ -60,6 +61,23 @@ public:
+ 	float pbwt_modulo_cm;
+ 	std::vector < int > pbwt_array_V;
+ 
++	//With few target haplotypes the prefix counts V are read at a handful of
++	//positions per site, so instead of writing all n_ref_haps of them the decode
++	//records the runs of the site and V is evaluated on demand: V[x] is the number
++	//of 1-alleles among PBWT positions [0, x), exactly what the array would hold.
++	bool pbwt_lazy_V = false;
++	std::vector < int > pbwt_run_start;				//first position of each run at the current site
++	std::vector < int > pbwt_run_ones;				//1-alleles before the run
++	std::vector < unsigned char > pbwt_run_sym;		//allele of the run
++
++	inline int pbwt_V(const int x) const
++	{
++		if (!pbwt_lazy_V) return pbwt_array_V[x];
++		if (x <= 0) return 0;
++		const int i = (int)(std::upper_bound(pbwt_run_start.begin(), pbwt_run_start.end(), x - 1) - pbwt_run_start.begin()) - 1;
++		return pbwt_run_ones[i] + (pbwt_run_sym[i] ? (x - pbwt_run_start[i]) : 0);
++	}
++
+ 	//FM
+ 	std::vector < int > pbwt_index;
+ 	std::vector < int > pbwt_small_index;
+diff --git a/phase/src/io/genotype_writer.cpp b/phase/src/io/genotype_writer.cpp
+index 5690995..228b4f6 100644
+--- a/phase/src/io/genotype_writer.cpp
++++ b/phase/src/io/genotype_writer.cpp
+@@ -24,6 +24,7 @@
+  ******************************************************************************/
+ 
+ #include <io/genotype_writer.h>
++#include <cassert>
+ #include "../../versions/versions.h"
+ 
+ #define OFILE_VCFU	0
+@@ -89,7 +90,18 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
+ 	float * posteriors = (float*)malloc(bcf_hdr_nsamples(hdr)*(H.max_ploidy+1)*sizeof(float));
+ 	//int * haplotypes = (int*)malloc(bcf_hdr_nsamples(hdr)*sizeof(int));
+ 
+-	std::map<float,float*> map_ps;
++	//Ordered (key, pointer) set of at most three entries with std::map insert
++	//semantics (an equal key is not inserted), replacing a per-sample std::map
++	//that cost three heap allocations per sample and site.
++	float ps_key[3]; float * ps_ptr[3]; int ps_n = 0;
++	auto ps_insert = [&](const float key, float * ptr) {
++		int pos = 0;
++		while (pos < ps_n && ps_key[pos] < key) pos++;
++		if (pos < ps_n && !(key < ps_key[pos])) return;
++		assert(ps_n < 3);
++		for (int q = ps_n ; q > pos ; q--) { ps_key[q] = ps_key[q-1]; ps_ptr[q] = ps_ptr[q-1]; }
++		ps_key[pos] = key; ps_ptr[pos] = ptr; ps_n++;
++	};
+ 	const std::size_t nsites = V.vec_pos.size();
+ 	float prog_step = 1.0/nsites;
+ 	float prog_bar = 0.0;
+@@ -151,16 +163,16 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
+ 			dosages[i] = std::roundf(ds * 1000.0) / 1000.0;
+ 			posteriors[(H.max_ploidy+1)*i+0] = floorf(gp0 * 1000.0) / 1000.0;
+ 			posteriors[(H.max_ploidy+1)*i+1] = floorf(gp1 * 1000.0) / 1000.0;
+-			map_ps.clear();
+-			map_ps.insert(std::make_pair(1.0f-(gp0-posteriors[(H.max_ploidy+1)*i+0]),&posteriors[(H.max_ploidy+1)*i+0]));
+-			map_ps.insert(std::make_pair(1.0f-(gp1-posteriors[(H.max_ploidy+1)*i+1]),&posteriors[(H.max_ploidy+1)*i+1]));
++			ps_n = 0;
++			ps_insert(1.0f-(gp0-posteriors[(H.max_ploidy+1)*i+0]),&posteriors[(H.max_ploidy+1)*i+0]);
++			ps_insert(1.0f-(gp1-posteriors[(H.max_ploidy+1)*i+1]),&posteriors[(H.max_ploidy+1)*i+1]);
+ 
+ 			if (H.max_ploidy>1)
+ 			{
+ 				if (G.vecG[i]->ploidy > 1)
+ 				{
+ 					posteriors[(H.max_ploidy+1)*i+2] = floorf(std::max(1.0f - (posteriors[(H.max_ploidy+1)*i+0]+posteriors[(H.max_ploidy+1)*i+1]), 0.0f)*1000.0)/1000.0;
+-					map_ps.insert(std::make_pair(1.0f-(gp2-posteriors[(H.max_ploidy+1)*i+2]),&posteriors[(H.max_ploidy+1)*i+2]));
++					ps_insert(1.0f-(gp2-posteriors[(H.max_ploidy+1)*i+2]),&posteriors[(H.max_ploidy+1)*i+2]);
+ 				}
+ 				else
+ 				{
+@@ -168,7 +180,7 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
+ 					bcf_float_set(&posteriors[(H.max_ploidy+1)*i+2], bcf_float_vector_end);
+ 				}
+ 			}
+-			for (auto iter = map_ps.begin(); iter != map_ps.end() && std::accumulate(std::next(posteriors,(H.max_ploidy+1)*i+0), std::next(posteriors,(H.max_ploidy+1)*i+G.vecG[i]->ploidy+1), 0.0f)<0.9999f; ++iter) *iter->second += 0.001f;
++			for (int q = 0; q < ps_n && std::accumulate(std::next(posteriors,(H.max_ploidy+1)*i+0), std::next(posteriors,(H.max_ploidy+1)*i+G.vecG[i]->ploidy+1), 0.0f)<0.9999f; ++q) *ps_ptr[q] += 0.001f;
+ 
+ 			// Compute INFO/INFO statistics
+ 			ds_sum += ds;
+diff --git a/phase/src/models/imputation_hmm.cpp b/phase/src/models/imputation_hmm.cpp
+index 3a35681..e53801e 100644
+--- a/phase/src/models/imputation_hmm.cpp
++++ b/phase/src/models/imputation_hmm.cpp
+@@ -45,7 +45,8 @@ imputation_hmm::imputation_hmm(conditioning_set * _C) {
+ }
+ 
+ imputation_hmm::~imputation_hmm() {
+-	Alpha.clear();
++	AlphaCkpt.clear();
++	AlphaBlock.clear();
+ 	AlphaSum.clear();
+ 	Emissions.clear();
+ }
+@@ -53,8 +54,10 @@ imputation_hmm::~imputation_hmm() {
+ void imputation_hmm::resize()
+ {
+ 	modK = ((C->n_states / 8) + (C->n_states % 8 ? 1 : 0))*8;
+-	AlphaSum.resize(C->polymorphic_sites.size(), 0.0f);
+-	Alpha.resize(C->polymorphic_sites.size() * modK, 0.0f);
++	const size_t n_poly = C->polymorphic_sites.size();
++	AlphaSum.resize(n_poly, 0.0f);
++	AlphaCkpt.resize((n_poly / CKPT_BLOCK + 1) * (size_t)modK, 0.0f);
++	AlphaBlock.resize((size_t)CKPT_BLOCK * modK, 0.0f);
+ 	Beta.resize(modK);
+ }
+ 
+@@ -77,97 +80,106 @@ void imputation_hmm::computePosteriors(const std::vector < float > & HL, std::ve
+ 	backward(HL, flat, HP);
+ }
+ 
+-void imputation_hmm::forward(std::vector < bool > & flat) {
++//One forward row. The arithmetic and its order are exactly those of the original
++//forward pass, so a row recomputed later from a checkpoint is bit-identical to
++//the row the full table would have held. Returns the row sum (AlphaSum[l]).
++float imputation_hmm::forwardRow(const unsigned int l, const float * prev, const float prevSum, float * out, const bool flat_l)
++{
+ 	const simde__m256i _vshift_count = simde_mm256_set_epi32(31,30,29,28,27,26,25,24);
+ 	const unsigned int nstates = C->n_states;
+ 	const unsigned int nstatesMD8 = (nstates / 8) * 8;
++	float rowSum = 0.0f;
+ 
+-	for (int l = 0 ; l < C->polymorphic_sites.size() ; l ++)
++	if (flat_l)
+ 	{
+-		AlphaSum[l] = 0.0f;
+-		if (flat[C->polymorphic_sites[l]] || C->lq_flag[C->polymorphic_sites[l]])
++		if (l == 0)
+ 		{
+-			if (l == 0)
+-			{
+-				fill(Alpha.begin(), Alpha.begin()+modK, 1.0f / nstates);
+-				AlphaSum[l] = 1.0f;
+-			}
+-			else
+-			{
+-				const float fact1 = C->t[l-1] / nstates;
+-				const float fact2 = C->nt[l-1] / AlphaSum[l-1];
+-				const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
+-				const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
+-				simde__m256 _sum = simde_mm256_set1_ps(0.0f);
+-				int k = 0;
+-				for (; k < nstatesMD8; k += 8)
+-				{
+-					const simde__m256 _prob_prev = simde_mm256_load_ps(&Alpha[(l-1)*modK+k]);
+-					const simde__m256 _prob_curr = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
+-					_sum = simde_mm256_add_ps(_sum, _prob_curr);
+-					simde_mm256_store_ps(&Alpha[l*modK+k], _prob_curr);
+-				}
+-				if (k) AlphaSum[l] = horizontal_add(_sum);
+-				for (int offset = nstatesMD8; offset < nstates ; offset ++) {
+-					Alpha[l*modK+offset] = (Alpha[(l-1)*modK+offset] * fact2 + fact1);
+-					AlphaSum[l] += Alpha[l*modK+offset];
+-				}
+-			}
++			std::fill(out, out + modK, 1.0f / nstates);
++			return 1.0f;
+ 		}
+-		else
++		const float fact1 = C->t[l-1] / nstates;
++		const float fact2 = C->nt[l-1] / prevSum;
++		const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++		const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
++		simde__m256 _sum = simde_mm256_set1_ps(0.0f);
++		unsigned int k = 0;
++		for (; k < nstatesMD8; k += 8)
+ 		{
+-			const std::array<float,2> emit = {Emissions[2*C->polymorphic_sites[l]+0], Emissions[2*C->polymorphic_sites[l]+1]};
+-			const simde__m256 _emit0 = simde_mm256_set1_ps(emit[0]);
+-			const simde__m256 _emit1 = simde_mm256_set1_ps(emit[1]);
+-			if (l == 0)
+-			{
+-				const float fact1 = 1.0f / nstates;
+-				const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
+-				simde__m256 _sum = simde_mm256_set1_ps(0.0f);
+-				int k = 0;
+-				for (; k < nstatesMD8; k += 8)
+-				{
+-					const simde__m256i _bcst = simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k));
+-					const simde__m256i _mask = simde_mm256_sllv_epi32(_bcst, _vshift_count);
+-					const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask));
+-					const simde__m256 _prob_curr = simde_mm256_mul_ps(_emiss, _fact1);
+-					_sum = simde_mm256_add_ps(_sum, _prob_curr);
+-					simde_mm256_store_ps(&Alpha[l*modK+k], _prob_curr);
+-				}
+-				if (k) AlphaSum[l] = horizontal_add(_sum);
+-				for (int offset = nstatesMD8; offset < nstates ; offset ++)
+-				{
+-					Alpha[l*modK+offset] = emit[C->Hvar.get(l, offset)] * fact1;
+-					AlphaSum[l] += Alpha[l*modK+offset];
+-				}
+-			}
+-			else
+-			{
+-				const float fact1 = C->t[l-1] / nstates;
+-				const float fact2 = C->nt[l-1] / AlphaSum[l-1];//AlphaSum2[l-1];// AlphaSum[l-1];
+-				const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
+-				const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
+-				simde__m256 _sum = simde_mm256_set1_ps(0.0f);
++			const simde__m256 _prob_prev = simde_mm256_load_ps(prev + k);
++			const simde__m256 _prob_curr = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
++			_sum = simde_mm256_add_ps(_sum, _prob_curr);
++			simde_mm256_store_ps(out + k, _prob_curr);
++		}
++		if (k) rowSum = horizontal_add(_sum);
++		for (unsigned int offset = nstatesMD8; offset < nstates ; offset ++) {
++			out[offset] = (prev[offset] * fact2 + fact1);
++			rowSum += out[offset];
++		}
++		return rowSum;
++	}
+ 
+-				int k = 0;
+-				for (; k < nstatesMD8; k += 8)
+-				{
+-					const simde__m256i _mask = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
+-					const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask));
+-					const simde__m256 _prob_prev = simde_mm256_load_ps(&Alpha[(l-1)*modK+k]);
+-					const simde__m256 _prob_temp = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
+-					const simde__m256 _prob_curr = simde_mm256_mul_ps(_prob_temp, _emiss);
+-					_sum = simde_mm256_add_ps(_sum, _prob_curr);
+-					simde_mm256_store_ps(&Alpha[l*modK+k], _prob_curr);
+-				}
+-				if (k) AlphaSum[l] = horizontal_add(_sum);
+-				for (int offset = nstatesMD8; offset < nstates ; offset ++)
+-				{
+-					Alpha[l*modK+offset] = (Alpha[(l-1)*modK+offset]*fact2+fact1)*emit[C->Hvar.get(l, offset)];
+-					AlphaSum[l] += Alpha[l*modK+offset];
+-				}
+-			}
++	const std::array<float,2> emit = {Emissions[2*C->polymorphic_sites[l]+0], Emissions[2*C->polymorphic_sites[l]+1]};
++	const simde__m256 _emit0 = simde_mm256_set1_ps(emit[0]);
++	const simde__m256 _emit1 = simde_mm256_set1_ps(emit[1]);
++	if (l == 0)
++	{
++		const float fact1 = 1.0f / nstates;
++		const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++		simde__m256 _sum = simde_mm256_set1_ps(0.0f);
++		unsigned int k = 0;
++		for (; k < nstatesMD8; k += 8)
++		{
++			const simde__m256i _bcst = simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k));
++			const simde__m256i _mask = simde_mm256_sllv_epi32(_bcst, _vshift_count);
++			const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask));
++			const simde__m256 _prob_curr = simde_mm256_mul_ps(_emiss, _fact1);
++			_sum = simde_mm256_add_ps(_sum, _prob_curr);
++			simde_mm256_store_ps(out + k, _prob_curr);
++		}
++		if (k) rowSum = horizontal_add(_sum);
++		for (unsigned int offset = nstatesMD8; offset < nstates ; offset ++)
++		{
++			out[offset] = emit[C->Hvar.get(l, offset)] * fact1;
++			rowSum += out[offset];
+ 		}
++		return rowSum;
++	}
++
++	const float fact1 = C->t[l-1] / nstates;
++	const float fact2 = C->nt[l-1] / prevSum;
++	const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++	const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
++	simde__m256 _sum = simde_mm256_set1_ps(0.0f);
++	unsigned int k = 0;
++	for (; k < nstatesMD8; k += 8)
++	{
++		const simde__m256i _mask = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
++		const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask));
++		const simde__m256 _prob_prev = simde_mm256_load_ps(prev + k);
++		const simde__m256 _prob_temp = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
++		const simde__m256 _prob_curr = simde_mm256_mul_ps(_prob_temp, _emiss);
++		_sum = simde_mm256_add_ps(_sum, _prob_curr);
++		simde_mm256_store_ps(out + k, _prob_curr);
++	}
++	if (k) rowSum = horizontal_add(_sum);
++	for (unsigned int offset = nstatesMD8; offset < nstates ; offset ++)
++	{
++		out[offset] = (prev[offset]*fact2+fact1)*emit[C->Hvar.get(l, offset)];
++		rowSum += out[offset];
++	}
++	return rowSum;
++}
++
++void imputation_hmm::forward(std::vector < bool > & flat) {
++	const unsigned int n_poly = C->polymorphic_sites.size();
++	const float * prev = nullptr;
++	float prevSum = 0.0f;
++	for (unsigned int l = 0 ; l < n_poly ; l ++)
++	{
++		float * out = rowSlot(l);
++		AlphaSum[l] = forwardRow(l, prev, prevSum, out, isFlat(flat, l));
++		prev = out;
++		prevSum = AlphaSum[l];
+ 	}
+ }
+ 
+@@ -178,178 +190,201 @@ void imputation_hmm::backward(const std::vector < float > & HL, std::vector < bo
+ 	const simde__m256i _vshift_count = simde_mm256_set_epi32(31,30,29,28,27,26,25,24);
+ 	const unsigned int nstates = C->n_states;
+ 	const unsigned int nstatesMD8 = (nstates / 8) * 8;
+-	const simde__m256 _zero = simde_mm256_set1_ps(0.0f);
+-	const simde__m256 _one = simde_mm256_set1_ps(1.0f);
++	const unsigned int n_poly = C->polymorphic_sites.size();
+ 	fill(Beta.begin(), Beta.end(), 1.0f);
+ 	simde__m256 _sum,  _prob0, _prob1;
+-	for (int l = C->polymorphic_sites.size()-1 ; l >= 0 ; l --)
+-	{
+-		betaSum=0.0f;
+-		prob_hid[0]=0.0f;
+-		prob_hid[1]=0.0f;
+ 
+-		_sum = simde_mm256_set1_ps(0.0f);
+-		_prob0 = simde_mm256_set1_ps(0.0f);
+-		_prob1 = simde_mm256_set1_ps(0.0f);
++	//Allele masks: the sign bit of each lane marks allele 1; spreading it over the
++	//lane gives an all-ones mask. Splitting alpha*beta with and/andnot equals the
++	//previous multiply by a 1.0/0.0 blend for the values that occur here: scaled
++	//probabilities are finite and non-negative (products of non-negative floats
++	//and positive scale factors), and the build does not enable FTZ/DAZ. It would
++	//differ only for NaN, infinity or -0.0, which the previous code would already
++	//have turned into NaN posteriors. Two blends and two multiplies fewer per 8
++	//states.
++	for (int c = n_poly ? (int)((n_poly - 1) / CKPT_BLOCK) : -1 ; c >= 0 ; c --)
++	{
++		const unsigned int l0 = (unsigned int)c * CKPT_BLOCK;
++		const unsigned int l1 = std::min(n_poly, l0 + CKPT_BLOCK);
++		const float * row_l0 = &AlphaCkpt[(size_t)c * modK];
+ 
+-		if (flat[C->polymorphic_sites[l]] || C->lq_flag[C->polymorphic_sites[l]])
++		//Recompute rows l0+1 .. l1-1 of the forward table from the checkpoint row l0.
+ 		{
+-			if (l == (C->polymorphic_sites.size()-1))
+-			{
+-				const float fact1 = 1.0f / nstates;
+-				const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
+-				int k = 0;
+-				for (; k < nstatesMD8; k += 8)
+-				{
+-					const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
+-					const simde__m256 _mask0 = simde_mm256_blendv_ps (_one, _zero, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _mask1 = simde_mm256_blendv_ps (_zero, _one, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _alphas = simde_mm256_load_ps(&Alpha[l*modK+k]);
+-					_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_mul_ps(_alphas, _mask0));
+-					_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_mul_ps(_alphas, _mask1));
+-					simde_mm256_store_ps(&Beta[k], _fact1);
+-				}
+-				if (k)
+-				{
+-					prob_hid[0] = horizontal_add(_prob0);
+-					prob_hid[1] = horizontal_add(_prob1);
+-				}
+-				for (int offset = nstatesMD8; offset < nstates ; offset ++)
+-				{
+-					Beta[offset] = fact1;
+-					prob_hid[C->Hvar.get(l, offset)] += Alpha[l*modK+offset];
+-				}
+-				betaSum = 1.0f;
+-			}
+-			else
+-			{
+-				const float fact1 = C->t[l] / nstates;
+-				const float fact2 = C->nt[l] / betaSumNext;
+-				const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
+-				const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
+-
+-				int k = 0;
+-				for (; k < nstatesMD8; k += 8)
+-				{
+-					const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
+-					const simde__m256 _mask0 = simde_mm256_blendv_ps (_one, _zero, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _mask1 = simde_mm256_blendv_ps (_zero, _one, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _prob_prev = simde_mm256_load_ps(&Beta[k]);
+-					const simde__m256 _prob_curr = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
+-					const simde__m256 _alphas = simde_mm256_load_ps(&Alpha[l*modK+k]);
+-					const simde__m256 _dotprod = simde_mm256_mul_ps(_alphas, _prob_curr);
+-					_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_mul_ps(_dotprod, _mask0));
+-					_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_mul_ps(_dotprod, _mask1));
+-					_sum = simde_mm256_add_ps(_sum, _prob_curr);
+-					simde_mm256_store_ps(&Beta[k], _prob_curr);
+-				}
+-				if (k)
+-				{
+-					prob_hid[0] = horizontal_add(_prob0);
+-					prob_hid[1] = horizontal_add(_prob1);
+-					betaSum = horizontal_add(_sum);
+-				}
+-				for (int offset = nstatesMD8; offset < nstates ; offset ++)
+-				{
+-					Beta[offset] = Beta[offset] * fact2 + fact1;
+-					prob_hid[C->Hvar.get(l, offset)] += Alpha[l*modK+offset] * Beta[offset];
+-					betaSum += Beta[offset];
+-				}
+-			}
+-
+-			prob_obs[0] = (prob_hid[0]*C->ee_imp + prob_hid[1]*C->ed_imp);
+-			prob_obs[1] = (prob_hid[0]*C->ed_imp + prob_hid[1]*C->ee_imp);
+-			if (!flat[C->polymorphic_sites[l]])
++			const float * prev = row_l0;
++			for (unsigned int l = l0 + 1 ; l < l1 ; l ++)
+ 			{
+-				prob_obs[0] *= HL[2*C->polymorphic_sites[l]+0];
+-				prob_obs[1] *= HL[2*C->polymorphic_sites[l]+1];
++				float * out = &AlphaBlock[(size_t)(l - l0) * modK];
++				forwardRow(l, prev, AlphaSum[l-1], out, isFlat(flat, l));
++				prev = out;
+ 			}
+ 		}
+-		else
++
++		for (int l = (int)l1 - 1 ; l >= (int)l0 ; l --)
+ 		{
+-			std::array<float,2> emit = {Emissions[2*C->polymorphic_sites[l]+0], Emissions[2*C->polymorphic_sites[l]+1]};
+-			const simde__m256 _emit0 = simde_mm256_set1_ps(emit[0]);
+-			const simde__m256 _emit1 = simde_mm256_set1_ps(emit[1]);
++			const float * arow = ((unsigned int)l == l0) ? row_l0 : &AlphaBlock[(size_t)(l - l0) * modK];
++			betaSum=0.0f;
++			prob_hid[0]=0.0f;
++			prob_hid[1]=0.0f;
+ 
+-			if (l == (C->polymorphic_sites.size()-1))
+-			{
+-				const float fact1 = 1.0f / nstates;
+-				const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++			_sum = simde_mm256_set1_ps(0.0f);
++			_prob0 = simde_mm256_set1_ps(0.0f);
++			_prob1 = simde_mm256_set1_ps(0.0f);
+ 
+-				int k = 0;
+-				for (; k < nstatesMD8; k += 8)
++			if (flat[C->polymorphic_sites[l]] || C->lq_flag[C->polymorphic_sites[l]])
++			{
++				if (l == (int)(n_poly-1))
+ 				{
+-					const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
+-					const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _mask0 = simde_mm256_blendv_ps (_one, _zero, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _mask1 = simde_mm256_blendv_ps (_zero, _one, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _alphas = simde_mm256_load_ps(&Alpha[l*modK+k]);
+-					const simde__m256 _prob_next = simde_mm256_mul_ps(_emiss, _fact1);
+-					_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_mul_ps(_alphas, _mask0));
+-					_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_mul_ps(_alphas, _mask1));
+-					_sum= simde_mm256_add_ps(_sum, _prob_next);
+-					simde_mm256_store_ps(&Beta[k], _prob_next);
++					const float fact1 = 1.0f / nstates;
++					const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++					unsigned int k = 0;
++					for (; k < nstatesMD8; k += 8)
++					{
++						const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
++						const simde__m256 _m1 = simde_mm256_castsi256_ps(simde_mm256_srai_epi32(_mask_curr, 31));
++						const simde__m256 _alphas = simde_mm256_load_ps(arow + k);
++						_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_andnot_ps(_m1, _alphas));
++						_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_and_ps(_alphas, _m1));
++						simde_mm256_store_ps(&Beta[k], _fact1);
++					}
++					if (k)
++					{
++						prob_hid[0] = horizontal_add(_prob0);
++						prob_hid[1] = horizontal_add(_prob1);
++					}
++					for (unsigned int offset = nstatesMD8; offset < nstates ; offset ++)
++					{
++						Beta[offset] = fact1;
++						prob_hid[C->Hvar.get(l, offset)] += arow[offset];
++					}
++					betaSum = 1.0f;
+ 				}
+-				if (k)
++				else
+ 				{
+-					prob_hid[0] = horizontal_add(_prob0);
+-					prob_hid[1] = horizontal_add(_prob1);
+-					betaSum = horizontal_add(_sum);
++					const float fact1 = C->t[l] / nstates;
++					const float fact2 = C->nt[l] / betaSumNext;
++					const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++					const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
++
++					unsigned int k = 0;
++					for (; k < nstatesMD8; k += 8)
++					{
++						const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
++						const simde__m256 _m1 = simde_mm256_castsi256_ps(simde_mm256_srai_epi32(_mask_curr, 31));
++						const simde__m256 _prob_prev = simde_mm256_load_ps(&Beta[k]);
++						const simde__m256 _prob_curr = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
++						const simde__m256 _alphas = simde_mm256_load_ps(arow + k);
++						const simde__m256 _dotprod = simde_mm256_mul_ps(_alphas, _prob_curr);
++						_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_andnot_ps(_m1, _dotprod));
++						_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_and_ps(_dotprod, _m1));
++						_sum = simde_mm256_add_ps(_sum, _prob_curr);
++						simde_mm256_store_ps(&Beta[k], _prob_curr);
++					}
++					if (k)
++					{
++						prob_hid[0] = horizontal_add(_prob0);
++						prob_hid[1] = horizontal_add(_prob1);
++						betaSum = horizontal_add(_sum);
++					}
++					for (unsigned int offset = nstatesMD8; offset < nstates ; offset ++)
++					{
++						Beta[offset] = Beta[offset] * fact2 + fact1;
++						prob_hid[C->Hvar.get(l, offset)] += arow[offset] * Beta[offset];
++						betaSum += Beta[offset];
++					}
+ 				}
+-				for (int offset = nstatesMD8; offset < nstates ; offset ++)
++
++				prob_obs[0] = (prob_hid[0]*C->ee_imp + prob_hid[1]*C->ed_imp);
++				prob_obs[1] = (prob_hid[0]*C->ed_imp + prob_hid[1]*C->ee_imp);
++				if (!flat[C->polymorphic_sites[l]])
+ 				{
+-					prob_hid[C->Hvar.get(l, offset)] += Alpha[l*modK+offset];
+-					Beta[offset] = emit[C->Hvar.get(l, offset)] * fact1;
+-					betaSum += Beta[offset];
++					prob_obs[0] *= HL[2*C->polymorphic_sites[l]+0];
++					prob_obs[1] *= HL[2*C->polymorphic_sites[l]+1];
+ 				}
+ 			}
+ 			else
+ 			{
+-				const float fact1 = C->t[l] / nstates;
+-				const float fact2 = C->nt[l] / betaSumNext;
+-				const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
+-				const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
++				std::array<float,2> emit = {Emissions[2*C->polymorphic_sites[l]+0], Emissions[2*C->polymorphic_sites[l]+1]};
++				const simde__m256 _emit0 = simde_mm256_set1_ps(emit[0]);
++				const simde__m256 _emit1 = simde_mm256_set1_ps(emit[1]);
+ 
+-				int k = 0;
+-				for (; k < nstatesMD8; k += 8)
+-				{
+-					const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
+-					const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _mask0 = simde_mm256_blendv_ps (_one, _zero, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _mask1 = simde_mm256_blendv_ps (_zero, _one, simde_mm256_castsi256_ps(_mask_curr));
+-					const simde__m256 _prob_prev = simde_mm256_load_ps(&Beta[k]);
+-					const simde__m256 _alphas = simde_mm256_load_ps(&Alpha[l*modK+k]);
+-					const simde__m256 _prob_curr = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
+-					const simde__m256 _dotprod = simde_mm256_mul_ps(_alphas, _prob_curr);
+-					const simde__m256 _prob_next = simde_mm256_mul_ps(_prob_curr, _emiss);
+-					_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_mul_ps(_dotprod, _mask0));
+-					_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_mul_ps(_dotprod, _mask1));
+-					_sum= simde_mm256_add_ps(_sum, _prob_next);
+-					simde_mm256_store_ps(&Beta[k], _prob_next);
+-				}
+-				if (k)
++				if (l == (int)(n_poly-1))
+ 				{
+-					prob_hid[0] = horizontal_add(_prob0);
+-					prob_hid[1] = horizontal_add(_prob1);
+-					betaSum = horizontal_add(_sum);
++					const float fact1 = 1.0f / nstates;
++					const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++
++					unsigned int k = 0;
++					for (; k < nstatesMD8; k += 8)
++					{
++						const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
++						const simde__m256 _m1 = simde_mm256_castsi256_ps(simde_mm256_srai_epi32(_mask_curr, 31));
++						const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask_curr));
++						const simde__m256 _alphas = simde_mm256_load_ps(arow + k);
++						const simde__m256 _prob_next = simde_mm256_mul_ps(_emiss, _fact1);
++						_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_andnot_ps(_m1, _alphas));
++						_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_and_ps(_alphas, _m1));
++						_sum= simde_mm256_add_ps(_sum, _prob_next);
++						simde_mm256_store_ps(&Beta[k], _prob_next);
++					}
++					if (k)
++					{
++						prob_hid[0] = horizontal_add(_prob0);
++						prob_hid[1] = horizontal_add(_prob1);
++						betaSum = horizontal_add(_sum);
++					}
++					for (unsigned int offset = nstatesMD8; offset < nstates ; offset ++)
++					{
++						prob_hid[C->Hvar.get(l, offset)] += arow[offset];
++						Beta[offset] = emit[C->Hvar.get(l, offset)] * fact1;
++						betaSum += Beta[offset];
++					}
+ 				}
+-				for (int offset = nstatesMD8; offset < nstates ; offset ++)
++				else
+ 				{
+-					Beta[offset] = Beta[offset] * fact2 + fact1;
+-					prob_hid[C->Hvar.get(l, offset)] += Alpha[l*modK+offset] * Beta[offset];
+-					Beta[offset] *= emit[C->Hvar.get(l, offset)];
+-					betaSum += Beta[offset];
++					const float fact1 = C->t[l] / nstates;
++					const float fact2 = C->nt[l] / betaSumNext;
++					const simde__m256 _fact1 = simde_mm256_set1_ps(fact1);
++					const simde__m256 _fact2 = simde_mm256_set1_ps(fact2);
++
++					unsigned int k = 0;
++					for (; k < nstatesMD8; k += 8)
++					{
++						const simde__m256i _mask_curr = simde_mm256_sllv_epi32(simde_mm256_set1_epi32((unsigned int )C->Hvar.getByte(l, k)), _vshift_count);
++						const simde__m256 _m1 = simde_mm256_castsi256_ps(simde_mm256_srai_epi32(_mask_curr, 31));
++						const simde__m256 _emiss = simde_mm256_blendv_ps (_emit0, _emit1, simde_mm256_castsi256_ps(_mask_curr));
++						const simde__m256 _prob_prev = simde_mm256_load_ps(&Beta[k]);
++						const simde__m256 _alphas = simde_mm256_load_ps(arow + k);
++						const simde__m256 _prob_curr = simde_mm256_fmadd_ps(_prob_prev, _fact2, _fact1);
++						const simde__m256 _dotprod = simde_mm256_mul_ps(_alphas, _prob_curr);
++						const simde__m256 _prob_next = simde_mm256_mul_ps(_prob_curr, _emiss);
++						_prob0 = simde_mm256_add_ps(_prob0, simde_mm256_andnot_ps(_m1, _dotprod));
++						_prob1 = simde_mm256_add_ps(_prob1, simde_mm256_and_ps(_dotprod, _m1));
++						_sum= simde_mm256_add_ps(_sum, _prob_next);
++						simde_mm256_store_ps(&Beta[k], _prob_next);
++					}
++					if (k)
++					{
++						prob_hid[0] = horizontal_add(_prob0);
++						prob_hid[1] = horizontal_add(_prob1);
++						betaSum = horizontal_add(_sum);
++					}
++					for (unsigned int offset = nstatesMD8; offset < nstates ; offset ++)
++					{
++						Beta[offset] = Beta[offset] * fact2 + fact1;
++						prob_hid[C->Hvar.get(l, offset)] += arow[offset] * Beta[offset];
++						Beta[offset] *= emit[C->Hvar.get(l, offset)];
++						betaSum += Beta[offset];
++					}
+ 				}
+-			}
+-			prob_hid[0] /= emit[0];
+-			prob_hid[1] /= emit[1];
+-			prob_obs[0] = (prob_hid[0]*C->ee_imp + prob_hid[1]*C->ed_imp) * HL[2*C->polymorphic_sites[l]+0];
+-			prob_obs[1] = (prob_hid[0]*C->ed_imp + prob_hid[1]*C->ee_imp) * HL[2*C->polymorphic_sites[l]+1];
++				prob_hid[0] /= emit[0];
++				prob_hid[1] /= emit[1];
++				prob_obs[0] = (prob_hid[0]*C->ee_imp + prob_hid[1]*C->ed_imp) * HL[2*C->polymorphic_sites[l]+0];
++				prob_obs[1] = (prob_hid[0]*C->ed_imp + prob_hid[1]*C->ee_imp) * HL[2*C->polymorphic_sites[l]+1];
+ 
++			}
++			HP[2*C->polymorphic_sites[l]+0] = prob_obs[0] / (prob_obs[0] + prob_obs[1]);
++			HP[2*C->polymorphic_sites[l]+1] = prob_obs[1] / (prob_obs[0] + prob_obs[1]);
++			betaSumNext = betaSum;
+ 		}
+-		HP[2*C->polymorphic_sites[l]+0] = prob_obs[0] / (prob_obs[0] + prob_obs[1]);
+-		HP[2*C->polymorphic_sites[l]+1] = prob_obs[1] / (prob_obs[0] + prob_obs[1]);
+-		betaSumNext = betaSum;
+ 	}
+ 	// Monomorphic sites
+ 	for (int l = 0 ; l < C->monomorphic_sites.size() ; l ++)
+diff --git a/phase/src/models/imputation_hmm.h b/phase/src/models/imputation_hmm.h
+index a4f609d..0987f92 100644
+--- a/phase/src/models/imputation_hmm.h
++++ b/phase/src/models/imputation_hmm.h
+@@ -40,12 +40,28 @@ private:
+ 	conditioning_set * C;
+ 	unsigned int modK;
+ 
++	//The forward table is checkpointed: one Alpha row every CKPT_BLOCK polymorphic
++	//sites is kept, and the backward pass recomputes each block of rows into a
++	//small buffer with exactly the arithmetic of the forward pass. Posteriors are
++	//bit-identical to a full table; memory drops from n_poly x modK floats to
++	//(n_poly / CKPT_BLOCK + CKPT_BLOCK) x modK floats and the block stays in cache.
++	static constexpr unsigned int CKPT_BLOCK = 64;
++
+ 	//DYNAMIC ARRAYS
+ 	aligned_vector32 < float > Emissions;
+-	aligned_vector32 < float > Alpha;
++	aligned_vector32 < float > AlphaCkpt;		//checkpoint rows, one per CKPT_BLOCK sites
++	aligned_vector32 < float > AlphaBlock;		//scratch rows for the current block
+ 	aligned_vector32 < float > AlphaSum;
+ 	aligned_vector32 < float > Beta;
+ 
++	inline bool isFlat(const std::vector < bool > & flat, const unsigned int l) const {
++		return flat[C->polymorphic_sites[l]] || C->lq_flag[C->polymorphic_sites[l]];
++	}
++	inline float * rowSlot(const unsigned int l) {
++		return (l % CKPT_BLOCK == 0) ? &AlphaCkpt[(size_t)(l / CKPT_BLOCK) * modK] : &AlphaBlock[(size_t)(l % CKPT_BLOCK) * modK];
++	}
++	float forwardRow(const unsigned int l, const float * prev, const float prevSum, float * out, const bool flat_l);
++
+ public:
+ 	//CONSTRUCTOR/DESTRUCTOR
+ 	imputation_hmm(conditioning_set *);
+diff --git a/phase/src/models/phasing_hmm.cpp b/phase/src/models/phasing_hmm.cpp
+index 64d612e..ec98055 100644
+--- a/phase/src/models/phasing_hmm.cpp
++++ b/phase/src/models/phasing_hmm.cpp
+@@ -68,6 +68,7 @@ void phasing_hmm::reallocate(const std::vector < bool > & H0, const std::vector
+ 	VAR_ALT.clear();
+ 	VAR_ABS.clear();
+ 	VAR_REL.clear();
++	VAR_YT.clear();
+ 	for (int l = 0, n_het = 0 ; l < C->polymorphic_sites.size() ; l ++) {
+ 		bool a0 = H0[C->polymorphic_sites[l]];
+ 		bool a1 = H1[C->polymorphic_sites[l]];
+@@ -95,6 +96,10 @@ void phasing_hmm::reallocate(const std::vector < bool > & H0, const std::vector
+ 		}
+ 	}
+ 
++	//CACHE TRANSITIONS [same values the forward/backward passes recomputed per site]
++	VAR_YT.resize(VAR_ABS.size(), 0.0f);
++	for (int l = 1 ; l < VAR_ABS.size() ; l ++) VAR_YT[l] = C->getTransition(VAR_ABS[l-1], VAR_ABS[l]);
++
+ 	//COMPUTE SEGMENTATION
+ 	int nv = 0;
+ 	segments.clear();
+@@ -149,8 +154,7 @@ void phasing_hmm::forward()
+ 		curr_abs_locus = VAR_ABS[curr_idx_locus];
+ 		curr_rel_locus = VAR_REL[curr_idx_locus];
+ 
+-		yt = 0.0f;
+-		if (curr_idx_locus) yt = C->getTransition(VAR_ABS[curr_idx_locus-1], VAR_ABS[curr_idx_locus]);
++		yt = VAR_YT[curr_idx_locus];
+ 		nt = 1.0f - yt;
+ 
+ 		if (VAR_TYP[curr_idx_locus] >= VAR_PEAK_HET) {
+@@ -199,8 +203,7 @@ void phasing_hmm::backward() {
+ 		curr_abs_locus = VAR_ABS[curr_idx_locus];
+ 		curr_rel_locus = VAR_REL[curr_idx_locus];
+ 
+-		yt = 0.0f;
+-		if (curr_idx_locus < (VAR_TYP.size()-1)) yt = C->getTransition(VAR_ABS[curr_idx_locus], VAR_ABS[curr_idx_locus+1]);
++		yt = (curr_idx_locus < (VAR_TYP.size()-1)) ? VAR_YT[curr_idx_locus+1] : 0.0f;
+ 		nt = 1.0f - yt;
+ 
+ 		if (VAR_TYP[curr_idx_locus] >= VAR_PEAK_HET) {
+diff --git a/phase/src/models/phasing_hmm.h b/phase/src/models/phasing_hmm.h
+index d3531e5..2e7ecef 100644
+--- a/phase/src/models/phasing_hmm.h
++++ b/phase/src/models/phasing_hmm.h
+@@ -31,6 +31,7 @@
+ #include <simde/x86/avx2.h>
+ #include <simde/x86/fma.h>
+ #include <boost/align/aligned_allocator.hpp>
++#include <array>
+ 
+ template <typename T>
+ using aligned_vector32 = std::vector<T, boost::alignment::aligned_allocator < T, 32 > >;
+@@ -66,6 +67,7 @@ private:
+ 	std::vector < bool > VAR_ALT;
+ 	std::vector < int > VAR_ABS;
+ 	std::vector < int > VAR_REL;
++	std::vector < float > VAR_YT;		//transition into site l from site l-1 (0 for l == 0), cached once per rephase
+ 
+ 	//COORDINATES & CONSTANTS
+ 	unsigned int n_segs;
+@@ -374,23 +376,33 @@ void phasing_hmm::SUMK() {
+ inline
+ bool phasing_hmm::TRANS_HAP()
+ {
++	//One pass over the states with one accumulator per haplotype lane. Each lane
++	//sums exactly the same products in the same order as the former eight passes.
+ 	const size_t states_haps = (size_t)C->n_states*HAP_NUMBER;
+ 	sumHProbs = 0.0f;
+-	yt = C->getTransition(VAR_ABS[curr_idx_locus], VAR_ABS[curr_idx_locus+1]);
++	yt = VAR_YT[curr_idx_locus+1];
+ 	nt = 1.0f - yt;
+ 	const simde__m256 _fact2 = simde_mm256_set1_ps( nt / probSumT);
+-	int h1 = 0, j=0;
+-	for (; h1 < HAP_NUMBER ; h1++, j += HAP_NUMBER)
++	std::array <simde__m256, HAP_NUMBER > _fact1, _sum;
++	for (int h1 = 0 ; h1 < HAP_NUMBER ; h1++)
+ 	{
+-		const simde__m256 _fact1 = simde_mm256_set1_ps((probSumH[h1]/probSumT) * yt / C->n_states);
+-		simde__m256 _sum = simde_mm256_set1_ps(0.0f);
+-		for(int k=0, i=0; k != C->n_states ; ++k, i += HAP_NUMBER)
++		_fact1[h1] = simde_mm256_set1_ps((probSumH[h1]/probSumT) * yt / C->n_states);
++		_sum[h1] = simde_mm256_set1_ps(0.0f);
++	}
++	const float * pnext = &phasingProb[(curr_segment_index+1)*states_haps];
++	for(int k=0, i=0; k != C->n_states ; ++k, i += HAP_NUMBER)
++	{
++		const simde__m256 _pn = simde_mm256_load_ps(pnext + i);
++		for (int h1 = 0 ; h1 < HAP_NUMBER ; h1++)
+ 		{
+-			const simde__m256 _prob0 = simde_mm256_fmadd_ps(simde_mm256_set1_ps(prob[i+h1]), _fact2, _fact1);
+-			_sum = simde_mm256_add_ps(_sum, simde_mm256_mul_ps(_prob0, simde_mm256_load_ps(&phasingProb[(curr_segment_index+1)*states_haps+i])));
++			const simde__m256 _prob0 = simde_mm256_fmadd_ps(simde_mm256_set1_ps(prob[i+h1]), _fact2, _fact1[h1]);
++			_sum[h1] = simde_mm256_add_ps(_sum[h1], simde_mm256_mul_ps(_prob0, _pn));
+ 		}
+-		simde_mm256_store_ps(&HProbs[j], _sum);
+-		sumHProbs += horizontal_add(_sum);
++	}
++	for (int h1 = 0, j = 0 ; h1 < HAP_NUMBER ; h1++, j += HAP_NUMBER)
++	{
++		simde_mm256_store_ps(&HProbs[j], _sum[h1]);
++		sumHProbs += horizontal_add(_sum[h1]);
+ 	}
+ 	return (std::isnan(sumHProbs) || std::isinf(sumHProbs) || sumHProbs < std::numeric_limits<float>::min());
+ }

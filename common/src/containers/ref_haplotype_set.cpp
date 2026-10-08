@@ -44,6 +44,42 @@ void ref_haplotype_set::allocate()
 	ShapRef = std::vector < std::vector < int > > (n_ref_haps);
 }
 
+
+//Haplotype-major copy of the common-site panel. conditioning_set builds its
+//site-major Hvar for the selected states by transposing whole rows of this
+//copy: K sequential row reads and an 8x8 bit transpose per block, instead of
+//one random bit read per (site, state). It holds a second copy of the
+//common-site panel (n_ref_haps x n_com_sites bits), built once at load and
+//neither serialized nor checksummed.
+void ref_haplotype_set::buildHapMajor()
+{
+	tac.clock();
+	HhapRef.allocate(n_ref_haps, n_com_sites);
+	const size_t srcRowB = HvarRef.n_cols / 8;
+	const size_t dstRowB = HhapRef.n_cols / 8;
+	const unsigned int n_site_blocks = (n_com_sites + 7) / 8;
+	const unsigned int n_hap_bytes = (n_ref_haps + 7) / 8;
+	unsigned char in[8], out[8];
+	for (unsigned int hb = 0 ; hb < n_hap_bytes ; hb ++)
+	{
+		for (unsigned int sb = 0 ; sb < n_site_blocks ; sb ++)
+		{
+			for (int i = 0 ; i < 8 ; i ++)
+			{
+				const unsigned int site = 8 * sb + i;
+				in[i] = (site < n_com_sites) ? HvarRef.bytes[(size_t)site * srcRowB + hb] : 0;
+			}
+			bitmatrix_transpose8x8(in, out);
+			for (int b = 0 ; b < 8 ; b ++)
+			{
+				const unsigned int hap = 8 * hb + b;
+				if (hap < n_ref_haps) HhapRef.bytes[(size_t)hap * dstRowB + sb] = out[b];
+			}
+		}
+	}
+	vrb.bullet("Haplotype-major panel copy [" + stb.str(HhapRef.n_bytes / (1024 * 1024)) + " Mb] (" + stb.str(tac.rel_time()*1.0/1000, 2) + "s)");
+}
+
 void ref_haplotype_set::build_sparsePBWT(const variant_map & M)
 {
 	tac.clock();

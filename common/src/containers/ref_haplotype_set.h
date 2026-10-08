@@ -119,6 +119,7 @@ public:
 	std::vector < std::vector < int > > ShapRef;				// Rare alleles per haplotype
 	std::vector < std::vector <int> > SvarRef;
 	bitmatrix HvarRef;								// Bitmatrix of haplotypes, variant first / transpose of Hhap;
+	bitmatrix HhapRef;								// Haplotype-major copy of HvarRef [rows = haplotypes, cols = common sites]; built at load, not serialized
 
 	std::vector < unsigned char > Ypacked;
 	std::vector < std::vector <int > > A_small_idx;
@@ -134,6 +135,7 @@ public:
 	virtual ~ref_haplotype_set();
 
 	void allocate();
+	void buildHapMajor();
 	void build_sparsePBWT(const variant_map & M);
 	void update_full_pbwt_ay(const int ref_rac_l, const int l, std::vector<int>& pbwt_ref_idx);
 	void update_small_pbwt_ay(const int ref_rac_l, std::vector<bool> rare_small_haps);

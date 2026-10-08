@@ -27,6 +27,8 @@
 #define _BITMATRIX_H
 
 #include <cstdlib>
+#include <cstdint>
+#include <climits>
 #include <utils/otools.h>
 #include <utils/checksum_utils.h>
 #include "boost/serialization/serialization.hpp"
@@ -35,6 +37,19 @@
 
 inline static unsigned int abracadabra(const unsigned int &i1, const unsigned int &i2) {
 	return static_cast<unsigned int>((static_cast<unsigned long int>(i1) * static_cast<unsigned long int>(i2)) >> 32);
+}
+
+
+//8x8 bit-block transpose for MSB-first bytes: in[i] bit (7-j) == out[j] bit (7-i).
+static_assert(CHAR_BIT == 8, "bitmatrix packs 8 columns per byte");
+inline static void bitmatrix_transpose8x8(const unsigned char in[8], unsigned char out[8]) {
+	std::uint64_t x = 0;
+	for (int i = 0 ; i < 8 ; i ++) x = (x << 8) | in[i];
+	std::uint64_t t;
+	t = (x ^ (x >> 7)) & 0x00AA00AA00AA00AAULL; x = x ^ t ^ (t << 7);
+	t = (x ^ (x >> 14)) & 0x0000CCCC0000CCCCULL; x = x ^ t ^ (t << 14);
+	t = (x ^ (x >> 28)) & 0x00000000F0F0F0F0ULL; x = x ^ t ^ (t << 28);
+	for (int j = 0 ; j < 8 ; j ++) out[j] = (unsigned char)(x >> (8 * (7 - j)));
 }
 
 class bitmatrix

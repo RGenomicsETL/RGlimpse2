@@ -125,6 +125,7 @@ void caller::read_files_and_initialise() {
 		else vrb.error("No valid input options (input-gl / bam-list / bam)");
 	}
 	H.transposeRareRef();
+	H.buildHapMajor();
 
 	//step3: Read and initialise genetic map
 	if (input_fmt == InputFormat::BCF)
@@ -184,7 +185,17 @@ bool caller::read_binary_reference_panel(const std::string& reference_filename, 
 	//common case (a missing or mistyped --reference path) retrying just delays the
 	//failure, so report it precisely and mark it non_retryable to fail fast. Transient
 	// localization failures surface later, as read errors during deserialization.
-	std::ifstream ifs(reference_filename, std::ios::binary | std::ios_base::in);
+	//A large stream buffer lets the deserialisation issue a few multi-megabyte
+	//read calls instead of hundreds of readahead-sized ones per panel, which is
+	//what IOPS-throttled or high-latency storage charges for (measured with
+	//libstdc++; other standard libraries may honour pubsetbuf differently). The
+	//bytes read are unchanged. The buffer is optional: if it cannot be allocated
+	//the stream keeps its default buffer.
+	std::vector < char > iobuf;
+	try { iobuf.resize((size_t)16 << 20); } catch (const std::bad_alloc&) { iobuf.clear(); }
+	std::ifstream ifs;
+	if (!iobuf.empty()) ifs.rdbuf()->pubsetbuf(iobuf.data(), iobuf.size());
+	ifs.open(reference_filename, std::ios::binary | std::ios_base::in);
 	if (!ifs.good())
 	{
 		err_msg = "could not open file (not good(): eofbit, failbit or badbit set, or file not found). Please check the path.";

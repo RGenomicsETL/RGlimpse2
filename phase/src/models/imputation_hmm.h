@@ -40,11 +40,27 @@ private:
 	conditioning_set * C;
 	unsigned int modK;
 
+	//The forward table is checkpointed: one Alpha row every CKPT_BLOCK polymorphic
+	//sites is kept, and the backward pass recomputes each block of rows into a
+	//small buffer with exactly the arithmetic of the forward pass. Posteriors are
+	//bit-identical to a full table; memory drops from n_poly x modK floats to
+	//(n_poly / CKPT_BLOCK + CKPT_BLOCK) x modK floats and the block stays in cache.
+	static constexpr unsigned int CKPT_BLOCK = 64;
+
 	//DYNAMIC ARRAYS
 	aligned_vector32 < float > Emissions;
-	aligned_vector32 < float > Alpha;
+	aligned_vector32 < float > AlphaCkpt;		//checkpoint rows, one per CKPT_BLOCK sites
+	aligned_vector32 < float > AlphaBlock;		//scratch rows for the current block
 	aligned_vector32 < float > AlphaSum;
 	aligned_vector32 < float > Beta;
+
+	inline bool isFlat(const std::vector < bool > & flat, const unsigned int l) const {
+		return flat[C->polymorphic_sites[l]] || C->lq_flag[C->polymorphic_sites[l]];
+	}
+	inline float * rowSlot(const unsigned int l) {
+		return (l % CKPT_BLOCK == 0) ? &AlphaCkpt[(size_t)(l / CKPT_BLOCK) * modK] : &AlphaBlock[(size_t)(l % CKPT_BLOCK) * modK];
+	}
+	float forwardRow(const unsigned int l, const float * prev, const float prevSum, float * out, const bool flat_l);
 
 public:
 	//CONSTRUCTOR/DESTRUCTOR

@@ -63,6 +63,8 @@ public:
 	std::vector < unsigned int > idxHaps_ref;				//Indexes of conditioning_states in ref haplotype_set
 	std::vector < std::vector < unsigned int > > Svar;		//Sparse bitmatrix / Variant first
 	bitmatrix Hvar;									//Plain bitmatrix / Variant first
+	std::vector < unsigned int > rel_of_com;			//Hvar row of each common site
+	std::vector < unsigned char > zero_hap_row;		//All-zero haplotype row used to pad the last state block
 
 	//TRANSITION & EMISSION PROBABILITIES
 	std::vector < float > t;
@@ -93,6 +95,7 @@ public:
 
 	//SELECTION ROUTINES
 	void compactSelection(const int ind, const int iter);
+	void buildCommonRows();
 	void select(const int ind, const int iter);
 
 	//UPDATE TRANSITION PROBS

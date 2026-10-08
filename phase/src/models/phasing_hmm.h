@@ -31,6 +31,7 @@
 #include <simde/x86/avx2.h>
 #include <simde/x86/fma.h>
 #include <boost/align/aligned_allocator.hpp>
+#include <array>
 
 template <typename T>
 using aligned_vector32 = std::vector<T, boost::alignment::aligned_allocator < T, 32 > >;
@@ -66,6 +67,7 @@ private:
 	std::vector < bool > VAR_ALT;
 	std::vector < int > VAR_ABS;
 	std::vector < int > VAR_REL;
+	std::vector < float > VAR_YT;		//transition into site l from site l-1 (0 for l == 0), cached once per rephase
 
 	//COORDINATES & CONSTANTS
 	unsigned int n_segs;
@@ -374,23 +376,33 @@ void phasing_hmm::SUMK() {
 inline
 bool phasing_hmm::TRANS_HAP()
 {
+	//One pass over the states with one accumulator per haplotype lane. Each lane
+	//sums exactly the same products in the same order as the former eight passes.
 	const size_t states_haps = (size_t)C->n_states*HAP_NUMBER;
 	sumHProbs = 0.0f;
-	yt = C->getTransition(VAR_ABS[curr_idx_locus], VAR_ABS[curr_idx_locus+1]);
+	yt = VAR_YT[curr_idx_locus+1];
 	nt = 1.0f - yt;
 	const simde__m256 _fact2 = simde_mm256_set1_ps( nt / probSumT);
-	int h1 = 0, j=0;
-	for (; h1 < HAP_NUMBER ; h1++, j += HAP_NUMBER)
+	std::array <simde__m256, HAP_NUMBER > _fact1, _sum;
+	for (int h1 = 0 ; h1 < HAP_NUMBER ; h1++)
 	{
-		const simde__m256 _fact1 = simde_mm256_set1_ps((probSumH[h1]/probSumT) * yt / C->n_states);
-		simde__m256 _sum = simde_mm256_set1_ps(0.0f);
-		for(int k=0, i=0; k != C->n_states ; ++k, i += HAP_NUMBER)
+		_fact1[h1] = simde_mm256_set1_ps((probSumH[h1]/probSumT) * yt / C->n_states);
+		_sum[h1] = simde_mm256_set1_ps(0.0f);
+	}
+	const float * pnext = &phasingProb[(curr_segment_index+1)*states_haps];
+	for(int k=0, i=0; k != C->n_states ; ++k, i += HAP_NUMBER)
+	{
+		const simde__m256 _pn = simde_mm256_load_ps(pnext + i);
+		for (int h1 = 0 ; h1 < HAP_NUMBER ; h1++)
 		{
-			const simde__m256 _prob0 = simde_mm256_fmadd_ps(simde_mm256_set1_ps(prob[i+h1]), _fact2, _fact1);
-			_sum = simde_mm256_add_ps(_sum, simde_mm256_mul_ps(_prob0, simde_mm256_load_ps(&phasingProb[(curr_segment_index+1)*states_haps+i])));
+			const simde__m256 _prob0 = simde_mm256_fmadd_ps(simde_mm256_set1_ps(prob[i+h1]), _fact2, _fact1[h1]);
+			_sum[h1] = simde_mm256_add_ps(_sum[h1], simde_mm256_mul_ps(_prob0, _pn));
 		}
-		simde_mm256_store_ps(&HProbs[j], _sum);
-		sumHProbs += horizontal_add(_sum);
+	}
+	for (int h1 = 0, j = 0 ; h1 < HAP_NUMBER ; h1++, j += HAP_NUMBER)
+	{
+		simde_mm256_store_ps(&HProbs[j], _sum[h1]);
+		sumHProbs += horizontal_add(_sum[h1]);
 	}
 	return (std::isnan(sumHProbs) || std::isinf(sumHProbs) || sumHProbs < std::numeric_limits<float>::min());
 }

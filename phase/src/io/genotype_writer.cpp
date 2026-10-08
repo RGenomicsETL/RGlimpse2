@@ -24,6 +24,7 @@
  ******************************************************************************/
 
 #include <io/genotype_writer.h>
+#include <cassert>
 #include "../../versions/versions.h"
 
 #define OFILE_VCFU	0
@@ -89,7 +90,18 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 	float * posteriors = (float*)malloc(bcf_hdr_nsamples(hdr)*(H.max_ploidy+1)*sizeof(float));
 	//int * haplotypes = (int*)malloc(bcf_hdr_nsamples(hdr)*sizeof(int));
 
-	std::map<float,float*> map_ps;
+	//Ordered (key, pointer) set of at most three entries with std::map insert
+	//semantics (an equal key is not inserted), replacing a per-sample std::map
+	//that cost three heap allocations per sample and site.
+	float ps_key[3]; float * ps_ptr[3]; int ps_n = 0;
+	auto ps_insert = [&](const float key, float * ptr) {
+		int pos = 0;
+		while (pos < ps_n && ps_key[pos] < key) pos++;
+		if (pos < ps_n && !(key < ps_key[pos])) return;
+		assert(ps_n < 3);
+		for (int q = ps_n ; q > pos ; q--) { ps_key[q] = ps_key[q-1]; ps_ptr[q] = ps_ptr[q-1]; }
+		ps_key[pos] = key; ps_ptr[pos] = ptr; ps_n++;
+	};
 	const std::size_t nsites = V.vec_pos.size();
 	float prog_step = 1.0/nsites;
 	float prog_bar = 0.0;
@@ -151,16 +163,16 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 			dosages[i] = std::roundf(ds * 1000.0) / 1000.0;
 			posteriors[(H.max_ploidy+1)*i+0] = floorf(gp0 * 1000.0) / 1000.0;
 			posteriors[(H.max_ploidy+1)*i+1] = floorf(gp1 * 1000.0) / 1000.0;
-			map_ps.clear();
-			map_ps.insert(std::make_pair(1.0f-(gp0-posteriors[(H.max_ploidy+1)*i+0]),&posteriors[(H.max_ploidy+1)*i+0]));
-			map_ps.insert(std::make_pair(1.0f-(gp1-posteriors[(H.max_ploidy+1)*i+1]),&posteriors[(H.max_ploidy+1)*i+1]));
+			ps_n = 0;
+			ps_insert(1.0f-(gp0-posteriors[(H.max_ploidy+1)*i+0]),&posteriors[(H.max_ploidy+1)*i+0]);
+			ps_insert(1.0f-(gp1-posteriors[(H.max_ploidy+1)*i+1]),&posteriors[(H.max_ploidy+1)*i+1]);
 
 			if (H.max_ploidy>1)
 			{
 				if (G.vecG[i]->ploidy > 1)
 				{
 					posteriors[(H.max_ploidy+1)*i+2] = floorf(std::max(1.0f - (posteriors[(H.max_ploidy+1)*i+0]+posteriors[(H.max_ploidy+1)*i+1]), 0.0f)*1000.0)/1000.0;
-					map_ps.insert(std::make_pair(1.0f-(gp2-posteriors[(H.max_ploidy+1)*i+2]),&posteriors[(H.max_ploidy+1)*i+2]));
+					ps_insert(1.0f-(gp2-posteriors[(H.max_ploidy+1)*i+2]),&posteriors[(H.max_ploidy+1)*i+2]);
 				}
 				else
 				{
@@ -168,7 +180,7 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 					bcf_float_set(&posteriors[(H.max_ploidy+1)*i+2], bcf_float_vector_end);
 				}
 			}
-			for (auto iter = map_ps.begin(); iter != map_ps.end() && std::accumulate(std::next(posteriors,(H.max_ploidy+1)*i+0), std::next(posteriors,(H.max_ploidy+1)*i+G.vecG[i]->ploidy+1), 0.0f)<0.9999f; ++iter) *iter->second += 0.001f;
+			for (int q = 0; q < ps_n && std::accumulate(std::next(posteriors,(H.max_ploidy+1)*i+0), std::next(posteriors,(H.max_ploidy+1)*i+G.vecG[i]->ploidy+1), 0.0f)<0.9999f; ++q) *ps_ptr[q] += 0.001f;
 
 			// Compute INFO/INFO statistics
 			ds_sum += ds;

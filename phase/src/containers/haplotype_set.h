@@ -28,6 +28,7 @@
 
 #include <utils/otools.h>
 #include <utils/checksum_utils.h>
+#include <algorithm>
 
 #include <containers/bitmatrix.h>
 #include <containers/genotype_set.h>
@@ -59,6 +60,23 @@ public:
 	int pbwt_depth;
 	float pbwt_modulo_cm;
 	std::vector < int > pbwt_array_V;
+
+	//With few target haplotypes the prefix counts V are read at a handful of
+	//positions per site, so instead of writing all n_ref_haps of them the decode
+	//records the runs of the site and V is evaluated on demand: V[x] is the number
+	//of 1-alleles among PBWT positions [0, x), exactly what the array would hold.
+	bool pbwt_lazy_V = false;
+	std::vector < int > pbwt_run_start;				//first position of each run at the current site
+	std::vector < int > pbwt_run_ones;				//1-alleles before the run
+	std::vector < unsigned char > pbwt_run_sym;		//allele of the run
+
+	inline int pbwt_V(const int x) const
+	{
+		if (!pbwt_lazy_V) return pbwt_array_V[x];
+		if (x <= 0) return 0;
+		const int i = (int)(std::upper_bound(pbwt_run_start.begin(), pbwt_run_start.end(), x - 1) - pbwt_run_start.begin()) - 1;
+		return pbwt_run_ones[i] + (pbwt_run_sym[i] ? (x - pbwt_run_start[i]) : 0);
+	}
 
 	//FM
 	std::vector < int > pbwt_index;

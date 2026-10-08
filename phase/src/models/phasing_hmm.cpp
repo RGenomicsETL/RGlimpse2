@@ -68,6 +68,7 @@ void phasing_hmm::reallocate(const std::vector < bool > & H0, const std::vector 
 	VAR_ALT.clear();
 	VAR_ABS.clear();
 	VAR_REL.clear();
+	VAR_YT.clear();
 	for (int l = 0, n_het = 0 ; l < C->polymorphic_sites.size() ; l ++) {
 		bool a0 = H0[C->polymorphic_sites[l]];
 		bool a1 = H1[C->polymorphic_sites[l]];
@@ -94,6 +95,10 @@ void phasing_hmm::reallocate(const std::vector < bool > & H0, const std::vector 
 			}
 		}
 	}
+
+	//CACHE TRANSITIONS [same values the forward/backward passes recomputed per site]
+	VAR_YT.resize(VAR_ABS.size(), 0.0f);
+	for (int l = 1 ; l < VAR_ABS.size() ; l ++) VAR_YT[l] = C->getTransition(VAR_ABS[l-1], VAR_ABS[l]);
 
 	//COMPUTE SEGMENTATION
 	int nv = 0;
@@ -149,8 +154,7 @@ void phasing_hmm::forward()
 		curr_abs_locus = VAR_ABS[curr_idx_locus];
 		curr_rel_locus = VAR_REL[curr_idx_locus];
 
-		yt = 0.0f;
-		if (curr_idx_locus) yt = C->getTransition(VAR_ABS[curr_idx_locus-1], VAR_ABS[curr_idx_locus]);
+		yt = VAR_YT[curr_idx_locus];
 		nt = 1.0f - yt;
 
 		if (VAR_TYP[curr_idx_locus] >= VAR_PEAK_HET) {
@@ -199,8 +203,7 @@ void phasing_hmm::backward() {
 		curr_abs_locus = VAR_ABS[curr_idx_locus];
 		curr_rel_locus = VAR_REL[curr_idx_locus];
 
-		yt = 0.0f;
-		if (curr_idx_locus < (VAR_TYP.size()-1)) yt = C->getTransition(VAR_ABS[curr_idx_locus], VAR_ABS[curr_idx_locus+1]);
+		yt = (curr_idx_locus < (VAR_TYP.size()-1)) ? VAR_YT[curr_idx_locus+1] : 0.0f;
 		nt = 1.0f - yt;
 
 		if (VAR_TYP[curr_idx_locus] >= VAR_PEAK_HET) {

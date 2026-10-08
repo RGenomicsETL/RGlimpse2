@@ -17,7 +17,20 @@ The patches in [`series`](series) are applied in order:
 6. genotype-stride-aware overlap processing for cohorts whose ligated chunks
    contain only haploid samples; and
 7. direct pthread declarations in the threaded phase and reference-splitting
-   callers.
+   callers; and
+8. bit-identical phase kernel optimisations: a checkpointed imputation forward
+   table recomputed block by block in cache, and/andnot allele masks in the
+   backward pass, a haplotype-major panel copy with a tiled 8x8 bit transpose
+   for the conditioning bitmatrix, a single-pass segment transition in the
+   phasing HMM with cached per-site transitions, allocation-free output
+   rounding, and a sparse-PBWT selection that compacts the permutation with
+   block moves and, for few target haplotypes, evaluates prefix counts from
+   the run table instead of materialising them, and a 16 MB stream buffer for
+   the binary panel so throttled storage sees a few large reads per panel.
+
+Patches 1-7 are frozen at commit `095ebfeb09305ddb47237d04da37dcece9a707e8`
+(the end of that series); patch 8 and later ones are diffs against that
+commit, so they may touch files that earlier patches already changed.
 
 `Single-ALT` describes the representation consumed by GLIMPSE2. A multiallelic
 source site must be decomposed into one record per ALT before reference splitting;

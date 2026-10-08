@@ -24,6 +24,7 @@
  ******************************************************************************/
 
 #include <math.h>
+#include <cstring>
 #include <containers/haplotype_set.h>
 #include "boost/serialization/serialization.hpp"
 #include <boost/archive/tmpdir.hpp>
@@ -51,6 +52,7 @@ haplotype_set::haplotype_set()
 	nstored=0;
 	pbwt_depth = 0;
 	pbwt_modulo_cm = 0.0f;
+	pbwt_lazy_V = false;
 	max_ploidy = 2;
 	fploidy=2;
 	counter_sel_gf=0;
@@ -243,7 +245,14 @@ void haplotype_set::allocatePBWT(const int _pbwt_depth, const float _pbwt_modulo
 
 	pbwt_array_A = std::vector < int > (n_ref_haps);
 	pbwt_array_B = std::vector < int > (n_ref_haps);
-	pbwt_array_V = std::vector < int >(n_ref_haps+1);
+	pbwt_lazy_V = (n_tar_haps <= 16);
+	pbwt_array_V = std::vector < int >(pbwt_lazy_V ? 1 : n_ref_haps+1);
+	if (pbwt_lazy_V)
+	{
+		pbwt_run_start.reserve(n_ref_haps);
+		pbwt_run_ones.reserve(n_ref_haps);
+		pbwt_run_sym.reserve(n_ref_haps);
+	}
 	pbwt_index = std::vector < int > (n_tar_haps, 0);
 	f_k = std::vector<int>(n_tar_haps, 0);
 	g_k = std::vector<int>(n_tar_haps, n_ref_haps);
@@ -403,6 +412,27 @@ void haplotype_set::read_full_pbwt_av(const unsigned char*& pY, const int ref_ra
 	int mm;
 	const int size_a = n_ref_haps;
 	const std::array<int*,2> occ = {&u,&v};
+	if (pbwt_lazy_V)
+	{
+		pbwt_run_start.clear();
+		pbwt_run_ones.clear();
+		pbwt_run_sym.clear();
+		while (m < size_a)
+		{
+			z = *pY++; //read the encoded symbol
+			n = p3decode[z & 0x7f] ; //get how many chars are encoded
+			mm = m+n; //get limit of this block
+			z >>= 7; //get the symbol itself
+			std::copy(pbwt_array_A.begin()+m, pbwt_array_A.begin()+mm, pbwt_array_B.begin() + *occ[z]); //update B, (next A)
+			pbwt_run_start.push_back(m);
+			pbwt_run_ones.push_back(v-ref_rac_l);
+			pbwt_run_sym.push_back(z);
+			m = mm; //update position in PPA for next loop
+			*occ[z] += n; //update FM
+		}
+		pbwt_array_B.swap(pbwt_array_A); //switch A and B
+		return;
+	}
 	pbwt_array_V[0]=0;
 	while (m < size_a)
 	{
@@ -451,9 +481,12 @@ void haplotype_set::select_common_pd_fg(const int k, const int l_hq, const int l
 		const unsigned char prev_hap = tar_hap[htr];
 		tar_hap[htr] = HvarTar.get(l_all,htr);
 
-		idx = tar_hap[htr] * (ref_rac_l + pbwt_array_V[pbwt_index[htr]]) + (1-tar_hap[htr]) * (pbwt_index[htr] - pbwt_array_V[pbwt_index[htr]]);
-		f_dash = tar_hap[htr] * (ref_rac_l + pbwt_array_V[f_k[htr]]) + (1-tar_hap[htr]) * (f_k[htr] - pbwt_array_V[f_k[htr]]);
-		g_dash = tar_hap[htr] * (ref_rac_l + pbwt_array_V[g_k[htr]]) + (1-tar_hap[htr]) * (g_k[htr] - pbwt_array_V[g_k[htr]]);
+		const int V_idx = pbwt_V(pbwt_index[htr]);
+		const int V_f = pbwt_V(f_k[htr]);
+		const int V_g = pbwt_V(g_k[htr]);
+		idx = tar_hap[htr] * (ref_rac_l + V_idx) + (1-tar_hap[htr]) * (pbwt_index[htr] - V_idx);
+		f_dash = tar_hap[htr] * (ref_rac_l + V_f) + (1-tar_hap[htr]) * (f_k[htr] - V_f);
+		g_dash = tar_hap[htr] * (ref_rac_l + V_g) + (1-tar_hap[htr]) * (g_k[htr] - V_g);
 
 		if (g_dash <= f_dash)
 		{
@@ -618,12 +651,25 @@ void haplotype_set::init_common(const int k, const int l, const int prev_ref_rac
 		f_k[htr] = f_dash;
 		g_k[htr] = g_dash;
 	}
-	std::vector<bool> map_big_small(n_ref_haps, true);
+	//Compact A by dropping the (sorted, distinct) positions in A_small_idx[l] while
+	//keeping the order of the others, then append the small array. Moving the gap
+	//between consecutive dropped positions as one block gives exactly the
+	//element-by-element result of the previous loop without the per-call
+	//std::vector<bool> and the per-element bit test over every haplotype.
 	const std::vector<int>& small_idx = A_small_idx[l];
-	for (int htr=0; htr<small_idx.size(); ++htr) map_big_small[small_idx[htr]] = false;
+	const int n_small = small_idx.size();
 	int n_zeros = small_idx[0];
-	for (int htr=n_zeros+1; htr<n_ref_haps; ++htr)
-		if (map_big_small[htr]) pbwt_array_A[n_zeros++] = pbwt_array_A[htr];
+	for (int i = 0 ; i < n_small ; ++i)
+	{
+		const int from = small_idx[i] + 1;
+		const int to = (i + 1 < n_small) ? small_idx[i+1] : (int)n_ref_haps;
+		const int len = to - from;
+		if (len > 0)
+		{
+			std::memmove(&pbwt_array_A[n_zeros], &pbwt_array_A[from], (size_t)len * sizeof(int));
+			n_zeros += len;
+		}
+	}
 
 	for (int htr=0; htr<pbwt_small_A.size(); ++htr,++n_zeros)
 		pbwt_array_A[n_zeros]=pbwt_small_A[htr];

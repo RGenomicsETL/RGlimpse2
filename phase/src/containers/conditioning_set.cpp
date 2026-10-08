@@ -142,43 +142,59 @@ void conditioning_set::compactSelection(const int ind, const int iter)
 		else polymorphic_sites.push_back(l);
 	}
 
-	//Build bitmatrix Hvar
+	//Build bitmatrix Hvar: rare rows directly from the sparse carriers, common
+	//rows by transposing the selected rows of the haplotype-major panel copy.
 	Hvar.reallocate(polymorphic_sites.size(), n_states);
-	//Pack 8 selected reference bits per byte and write whole bytes (rather than 8
-	//read-modify-write set() calls per byte). Profiling showed this loop dominated
-	//runtime at ~35% of the cycles. The trailing bits when n_states is not a multiple
-	//of 8 still go through set() to preserve any pre-existing content in the row's
-	//last byte. Bit ordering matches set(): col 0 -> MSB ... col 7 -> LSB.
-	const int n_states_full = (n_states / 8) * 8;
-	for (int labs = 0, lrel = 0, lcom = 0 ; labs < n_tot_sites ; labs ++) {
+	rel_of_com.clear();
+	for (int labs = 0, lrel = 0 ; labs < n_tot_sites ; labs ++) {
 		if (var_type[labs] == TYPE_COMMON) {
-			for (int k = 0 ; k < n_states_full ; k += 8) {
-				const unsigned char b =
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+0]) << 7) |
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+1]) << 6) |
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+2]) << 5) |
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+3]) << 4) |
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+4]) << 3) |
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+5]) << 2) |
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+6]) << 1) |
-					((unsigned char)H.HvarRef.get(lcom, idxHaps_ref[k+7]) << 0);
-				Hvar.setByte(lrel, k, b);
-			}
-			for (int k = n_states_full ; k < n_states ; k++)
-				Hvar.set(lrel, k, H.HvarRef.get(lcom, idxHaps_ref[k]));
+			rel_of_com.push_back(lrel);
 			lrel++;
-			lcom++;
 		} else if (var_type[labs] == TYPE_RARE) {
 			Hvar.set(lrel, major_alleles[labs]);
 			for (int r = 0 ; r < Svar[labs].size() ; r++) Hvar.set(lrel, Svar[labs][r], !major_alleles[labs]);
 			lrel++;
 		} //else mono: do nothing
 	}
+	buildCommonRows();
 
 	//We just rebuilt polymorphic_sites, so any previously computed t/nt are stale.
 	//Mark the full-panel cache as valid only if we actually took that path.
 	transitions_valid = false;
 	cached_full_panel_n = use_list ? 0 : H.n_ref_haps;
+}
+
+
+//Fill the common-site rows of Hvar for the selected states. Each group of 8
+//states contributes one byte per Hvar row: the 8 haplotype rows are read
+//sequentially from H.HhapRef and transposed 8x8 bits at a time. Sites are
+//processed in tiles so the Hvar rows being written stay in cache. Bit order
+//matches bitmatrix::set(): state k+b -> bit (7-b).
+void conditioning_set::buildCommonRows()
+{
+	const unsigned int n_com = rel_of_com.size();
+	if (n_com == 0) return;
+	const size_t hapRowB = H.HhapRef.n_cols / 8;
+	if (zero_hap_row.size() < hapRowB) zero_hap_row.assign(hapRowB, 0);
+	const unsigned int n_com_bytes = (n_com + 7) / 8;
+	const unsigned int TILE_BYTES = 256;
+	unsigned char in[8], out[8];
+	for (unsigned int j0 = 0 ; j0 < n_com_bytes ; j0 += TILE_BYTES)
+	{
+		const unsigned int j1 = std::min(n_com_bytes, j0 + TILE_BYTES);
+		for (unsigned int k = 0 ; k < n_states ; k += 8)
+		{
+			const unsigned char * hp[8];
+			for (int b = 0 ; b < 8 ; b ++) hp[b] = (k + b < n_states) ? H.HhapRef.bytes + (size_t)idxHaps_ref[k + b] * hapRowB : zero_hap_row.data();
+			for (unsigned int j = j0 ; j < j1 ; j ++)
+			{
+				for (int b = 0 ; b < 8 ; b ++) in[b] = hp[b][j];
+				bitmatrix_transpose8x8(in, out);
+				const unsigned int smax = std::min(8u, n_com - 8 * j);
+				for (unsigned int s = 0 ; s < smax ; s ++) Hvar.setByte(rel_of_com[8 * j + s], k, out[s]);
+			}
+		}
+	}
 }
 
 void conditioning_set::updateTransitions()

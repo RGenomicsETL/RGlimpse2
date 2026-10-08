@@ -20,10 +20,31 @@ if ! git -C "$repo_root" cat-file -e "${upstream_commit}^{commit}"; then
   exit 1
 fi
 
+# Patches 0001-0007 are frozen at the commit that closed that series, so later
+# patches can touch the same files: each patch is the diff between the
+# previous layer and the next, and the series applies in order.
+series_base=095ebfeb09305ddb47237d04da37dcece9a707e8
+if ! git -C "$repo_root" cat-file -e "${series_base}^{commit}"; then
+  echo "ERROR: series base commit is not available: $series_base" >&2
+  exit 1
+fi
+
 write_patch() {
   output=$1
   shift
-  git -C "$repo_root" diff --binary --no-ext-diff "$upstream_commit" -- "$@" \
+  git -C "$repo_root" diff --binary --no-ext-diff "$upstream_commit" "$series_base" -- "$@" \
+    > "$script_dir/$output"
+  if [ ! -s "$script_dir/$output" ]; then
+    echo "ERROR: generated patch is empty: $output" >&2
+    exit 1
+  fi
+}
+
+# Later layers diff the working tree against the series base.
+write_layer_patch() {
+  output=$1
+  shift
+  git -C "$repo_root" diff --binary --no-ext-diff "$series_base" -- "$@" \
     > "$script_dir/$output"
   if [ ! -s "$script_dir/$output" ]; then
     echo "ERROR: generated patch is empty: $output" >&2
@@ -50,5 +71,19 @@ write_patch 0006-ligate-all-haploid-overlaps-safely.patch \
 write_patch 0007-include-pthread-header-in-threaded-callers.patch \
   phase/src/caller/caller_header.h \
   split_reference/src/caller/caller_header.h
+write_layer_patch 0008-optimise-phase-kernels-bit-identical.patch \
+  common/src/containers/bitmatrix.h \
+  common/src/containers/ref_haplotype_set.cpp \
+  common/src/containers/ref_haplotype_set.h \
+  phase/src/caller/caller_initialise.cpp \
+  phase/src/containers/conditioning_set.cpp \
+  phase/src/containers/conditioning_set.h \
+  phase/src/containers/haplotype_set.cpp \
+  phase/src/containers/haplotype_set.h \
+  phase/src/io/genotype_writer.cpp \
+  phase/src/models/imputation_hmm.cpp \
+  phase/src/models/imputation_hmm.h \
+  phase/src/models/phasing_hmm.cpp \
+  phase/src/models/phasing_hmm.h
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"
