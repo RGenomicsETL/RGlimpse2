@@ -87,6 +87,19 @@ checksums do not prove identity for every input. Visual write-ups:
 profile https://claude.ai/artifact/JTQmAUgN1iv8dAvcQMNsqn, patch walkthrough
 https://claude.ai/artifact/CKS8vhUsp5N4cctN7RVxcB.
 
+## Measured under the unified oracle (patch 0009, no FMA)
+
+Same inputs, pre-0008 tree and 0008 both built with the shipped flags:
+single-sample BAM chunk 8.43 -> 4.67 s (1.81x), RSS 1.07 -> 0.29 GB; 100
+samples on 1 thread 589 -> 421 s (1.40x), RSS 1.13 -> 0.36 GB; 100 samples on
+14 threads 165 -> 100 s (1.65x), RSS 9.95 -> 3.39 GB. Outputs identical
+(record checksums) for the single-sample and single-thread runs. Compared with
+the earlier FMA-build figures (1.82x / 1.39x / 1.85x) only the 14-thread ratio
+moves: without fused multiply-adds the optimised HMM is more compute-bound on
+this machine's E-cores (optimised 14-thread run 82 -> 100 s), while the
+bandwidth-bound baseline barely changes. The FMA build remains available with
+`PHASE_SIMD_FLAGS="-mavx2 -mfma"`.
+
 ## Oracle definition
 
 All builds now share one oracle: `-fno-fast-math -ffp-contract=off` and no
