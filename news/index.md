@@ -1,5 +1,16 @@
 # Changelog
 
+## RGlimpse2 0.0.0.9005
+
+- Make every build of the phase executable define the same numerical
+  oracle (patch 0009): the in-tree build now pins
+  `-fno-fast-math -ffp-contract=off` and compiles its AVX2 path without
+  `-mfma`, as the package build already did, so the in-tree scalar and
+  AVX2 executables, the package’s scalar and AVX2 executables, and the
+  pre-0008 sources built the same way all produce byte-identical output
+  on the fixtures. `PHASE_SIMD_FLAGS="-mavx2 -mfma"` restores upstream’s
+  faster but numerically different in-tree build.
+
 ## RGlimpse2 0.0.0.9004
 
 - Make the phase executables faster and far lighter without changing any

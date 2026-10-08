@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9005</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,10 @@
       <small>Source: <a href="https://github.com/RGenomicsETL/RGlimpse2/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9005" id="rglimpse2-0009005">RGlimpse2 0.0.0.9005<a class="anchor" aria-label="anchor" href="#rglimpse2-0009005"></a></h2>
+<ul><li>Make every build of the phase executable define the same numerical oracle (patch 0009): the in-tree build now pins <code>-fno-fast-math -ffp-contract=off</code> and compiles its AVX2 path without <code>-mfma</code>, as the package build already did, so the in-tree scalar and AVX2 executables, the package’s scalar and AVX2 executables, and the pre-0008 sources built the same way all produce byte-identical output on the fixtures. <code>PHASE_SIMD_FLAGS="-mavx2 -mfma"</code> restores upstream’s faster but numerically different in-tree build.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9004" id="rglimpse2-0009004">RGlimpse2 0.0.0.9004<a class="anchor" aria-label="anchor" href="#rglimpse2-0009004"></a></h2>
 <ul><li>Make the phase executables faster and far lighter without changing any output: the imputation forward table is checkpointed every 64 sites and recomputed block by block in cache, the backward pass splits alpha*beta by allele with and/andnot masks, the conditioning bitmatrix is built by transposing rows of a haplotype-major panel copy, the phasing segment transition runs in one pass, per-site transitions are cached, and output rounding no longer allocates. The sparse-PBWT selection compacts its permutation with block moves and, for runs with few target haplotypes, evaluates prefix counts from the run table instead of materialising them, which matters for single-sample runs; the binary reference panel is read through a 16 MB stream buffer so IOPS-throttled storage sees a few large reads per chunk instead of hundreds. Outputs are byte-identical to the previous executables on the AVX2 and portable paths (verified on x86-64 Linux with GCC 13 in the default floating-point environment); per-thread memory drops from about 730 MB to about 30 MB on a 2000-state, 57k-site chunk, while the haplotype-major panel copy adds a second copy of the common-site panel (n_ref_haps x n_com_sites bits, 26 MB for 6198 haplotypes and 35k common sites).</li>
