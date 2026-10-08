@@ -1,5 +1,30 @@
 # Changelog
 
+## RGlimpse2 0.0.0.9004
+
+- Make the phase executables faster and far lighter without changing any
+  output: the imputation forward table is checkpointed every 64 sites
+  and recomputed block by block in cache, the backward pass splits
+  alpha\*beta by allele with and/andnot masks, the conditioning
+  bitmatrix is built by transposing rows of a haplotype-major panel
+  copy, the phasing segment transition runs in one pass, per-site
+  transitions are cached, and output rounding no longer allocates. The
+  sparse-PBWT selection compacts its permutation with block moves and,
+  for runs with few target haplotypes, evaluates prefix counts from the
+  run table instead of materialising them, which matters for
+  single-sample runs; the binary reference panel is read through a 16 MB
+  stream buffer so IOPS-throttled storage sees a few large reads per
+  chunk instead of hundreds. Outputs are byte-identical to the previous
+  executables on the AVX2 and portable paths (verified on x86-64 Linux
+  with GCC 13 in the default floating-point environment); per-thread
+  memory drops from about 730 MB to about 30 MB on a 2000-state,
+  57k-site chunk, while the haplotype-major panel copy adds a second
+  copy of the common-site panel (n_ref_haps x n_com_sites bits, 26 MB
+  for 6198 haplotypes and 35k common sites).
+- Remove the phasing kernels’ unconditional multiply introduced during
+  the same work after review: a conditional multiply is kept so results
+  do not depend on the denormal mode of the floating-point environment.
+
 ## RGlimpse2 0.0.0.9003
 
 - Include the pthread header directly in threaded native callers so
