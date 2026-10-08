@@ -85,5 +85,7 @@ write_layer_patch 0008-optimise-phase-kernels-bit-identical.patch \
   phase/src/models/imputation_hmm.h \
   phase/src/models/phasing_hmm.cpp \
   phase/src/models/phasing_hmm.h
+write_layer_patch 0009-pin-floating-point-contraction.patch \
+  common.mk
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

@@ -87,6 +87,18 @@ checksums do not prove identity for every input. Visual write-ups:
 profile https://claude.ai/artifact/JTQmAUgN1iv8dAvcQMNsqn, patch walkthrough
 https://claude.ai/artifact/CKS8vhUsp5N4cctN7RVxcB.
 
+## Oracle definition
+
+All builds now share one oracle: `-fno-fast-math -ffp-contract=off` and no
+`-mfma` (patch 0009 for the in-tree makefile; the package build already had
+both). Under it, on the 10-sample fixture, the in-tree default build, the
+in-tree no-SIMD build, the package scalar and AVX2 executables, and the
+pre-0008 tree built the same way all give record checksum
+`7f52d43e73beb697736d09c42622ff58`; 0008 takes the fixture from 59.6 s to
+42.8 s there. GCC contracts scalar `a*b+c` into FMA in C++ mode even under
+`-std=c++17` when `-mfma` is on, which is why an explicit pin is needed and
+why upstream's `-mavx2 -mfma` build is a different (self-consistent) oracle.
+
 ## Remaining targets
 
 - Phasing HMM homozygous runs: ~85% of phasing sites are homozygous for the

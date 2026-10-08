@@ -7,7 +7,11 @@ dummy_build_folder_bin := $(shell mkdir -p bin)
 dummy_build_folder_obj := $(shell mkdir -p obj)
 
 #COMPILER & LINKER FLAGS
-CXXFLAG=-std=c++17 -O3 -Wno-ignored-attributes
+#Floating-point contraction is pinned off so a*b+c in scalar code is never
+#fused into FMA by the compiler: the same source then gives the same bits
+#under -std=c++17 and -std=gnu++17, and the RGlimpse2 package build uses the
+#same pin. Explicit SIMD FMA intrinsics are unaffected.
+CXXFLAG=-std=c++17 -O3 -fno-fast-math -ffp-contract=off -Wno-ignored-attributes
 LDFLAG=-O3
 
 #CXXFLAG=-O0 -g -Wno-ignored-attributes
@@ -39,7 +43,12 @@ EXEFILE=bin/GLIMPSE2_$(NAME)_static$(EXEEXT)
 #CXXFLAG+= -D__COMMIT_DATE__=\"$(COMMIT_DATE)\"
 
 ARCH := $(shell uname -m)
-PHASE_SIMD_FLAGS ?= -mavx2 -mfma
+#AVX2 without -mfma: SIMDe then implements fmadd as a multiply and an add with
+#two roundings, exactly as the scalar build does, so the in-tree AVX2 build,
+#the in-tree scalar build and every RGlimpse2 package backend produce the same
+#bytes. Set PHASE_SIMD_FLAGS="-mavx2 -mfma" to restore upstream's faster but
+#numerically different build.
+PHASE_SIMD_FLAGS ?= -mavx2
 ifeq ($(NAME),phase)
   ifneq (,$(filter x86_64 amd64,$(ARCH)))
     CXXFLAG += $(PHASE_SIMD_FLAGS)

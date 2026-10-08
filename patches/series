@@ -6,3 +6,4 @@
 0006-ligate-all-haploid-overlaps-safely.patch
 0007-include-pthread-header-in-threaded-callers.patch
 0008-optimise-phase-kernels-bit-identical.patch
+0009-pin-floating-point-contraction.patch

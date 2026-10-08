@@ -28,6 +28,12 @@ The patches in [`series`](series) are applied in order:
    the run table instead of materialising them, and a 16 MB stream buffer for
    the binary panel so throttled storage sees a few large reads per panel.
 
+9. one numerical oracle for every build: the in-tree compiler flags pin
+   `-fno-fast-math -ffp-contract=off` and the AVX2 path is compiled without
+   `-mfma`, matching the package build, so scalar and SIMD executables from
+   either build produce the same bytes (`PHASE_SIMD_FLAGS="-mavx2 -mfma"`
+   restores upstream's faster, numerically different build).
+
 Patches 1-7 are frozen at commit `095ebfeb09305ddb47237d04da37dcece9a707e8`
 (the end of that series); patch 8 and later ones are diffs against that
 commit, so they may touch files that earlier patches already changed.
