@@ -8,16 +8,23 @@ archive <- normalizePath(args[[1L]], mustWork = TRUE)
 build_dir <- normalizePath(args[[2L]], mustWork = FALSE)
 
 r_config <- function(key, optional = FALSE) {
+  # Keep stderr apart from the value: make can print warnings there (for
+  # example clock-skew notices about Makeconf on CI runners), and they must
+  # never become part of a compiler command or flag list.
+  stderr_file <- tempfile("rglimpse2-r-config-")
+  on.exit(unlink(stderr_file), add = TRUE)
   value <- suppressWarnings(system2(
     file.path(R.home("bin"), "R"),
     c("CMD", "config", key),
     stdout = TRUE,
-    stderr = if (optional) FALSE else TRUE
+    stderr = stderr_file
   ))
   status <- attr(value, "status")
   if (!is.null(status) && status != 0L) {
     if (optional) return("")
-    stop("R CMD config failed for ", key)
+    details <- if (file.exists(stderr_file)) readLines(stderr_file, warn = FALSE) else character()
+    stop("R CMD config failed for ", key,
+         if (length(details)) paste0(": ", paste(details, collapse = "\n")) else "")
   }
   trimws(paste(value, collapse = " "))
 }

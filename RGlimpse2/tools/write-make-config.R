@@ -9,21 +9,25 @@ backend <- match.arg(args[[2L]], c("scalar", "avx2", "avx512", "neon"))
 version_output <- if (length(args) == 3L) args[[3L]] else character()
 
 r_config <- function(key, optional = FALSE) {
-  command <- file.path(R.home("bin"), "R")
+  # Keep stderr apart from the value: make can print warnings there (for
+  # example clock-skew notices about Makeconf on CI runners), and they must
+  # never become part of a compiler command or flag list.
+  stderr_file <- tempfile("rglimpse2-r-config-")
+  on.exit(unlink(stderr_file), add = TRUE)
   value <- suppressWarnings(system2(
-    command,
+    file.path(R.home("bin"), "R"),
     c("CMD", "config", key),
     stdout = TRUE,
-    stderr = if (optional) FALSE else TRUE
+    stderr = stderr_file
   ))
   status <- attr(value, "status")
   if (!is.null(status) && status != 0L) {
-    if (optional) {
-      return("")
-    }
-    stop("R CMD config failed for ", key)
+    if (optional) return("")
+    details <- if (file.exists(stderr_file)) readLines(stderr_file, warn = FALSE) else character()
+    stop("R CMD config failed for ", key,
+         if (length(details)) paste0(": ", paste(details, collapse = "\n")) else "")
   }
-  paste(value, collapse = " ")
+  trimws(paste(value, collapse = " "))
 }
 
 htslib <- Rduckhts::rduckhts_htslib_config(validate = TRUE)
