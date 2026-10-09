@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,10 @@
       <small>Source: <a href="https://github.com/RGenomicsETL/RGlimpse2/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9006" id="rglimpse2-0009006">RGlimpse2 0.0.0.9006<a class="anchor" aria-label="anchor" href="#rglimpse2-0009006"></a></h2>
+<ul><li>Read <code>R CMD config</code> values without make’s stderr, so warnings such as a clock-skew notice about <code>Makeconf</code> on a CI runner can no longer be taken as the compiler command (seen on R-devel for Windows arm64).</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9005" id="rglimpse2-0009005">RGlimpse2 0.0.0.9005<a class="anchor" aria-label="anchor" href="#rglimpse2-0009005"></a></h2>
 <ul><li>Make every build of the phase executable define the same numerical oracle (patch 0009): the in-tree build now pins <code>-fno-fast-math -ffp-contract=off</code> and compiles its AVX2 path without <code>-mfma</code>, as the package build already did, so the in-tree scalar and AVX2 executables, the package’s scalar and AVX2 executables, and the pre-0008 sources built the same way all produce byte-identical output on the fixtures. <code>PHASE_SIMD_FLAGS="-mavx2 -mfma"</code> restores upstream’s faster but numerically different in-tree build.</li>

@@ -1,5 +1,11 @@
 # Changelog
 
+## RGlimpse2 0.0.0.9006
+
+- Read `R CMD config` values without make’s stderr, so warnings such as
+  a clock-skew notice about `Makeconf` on a CI runner can no longer be
+  taken as the compiler command (seen on R-devel for Windows arm64).
+
 ## RGlimpse2 0.0.0.9005
 
 - Make every build of the phase executable define the same numerical
