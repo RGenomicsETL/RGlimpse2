@@ -279,16 +279,16 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
 			}
 			else
 			{
-				// Keep any same-position SNP pileup cached, but give this site flat GLs.
-				caller.gls.dp_ind = 0;
-				caller.gls.ref_read = 0;
-				std::fill(caller.gls.llk.begin(), caller.gls.llk.end(), 0.0f);
+				++G.stats.depth_count[i][0];
+				G.stats.cov_ind[i].push(0);
+				++i_site;
+				continue;
 			}
 			if (caller.gls.dp_ind > 0)
 			{
 				int max_llk = 0;
 				for (int j=1;j<sample_ploidyP1;++j) if (caller.gls.llk[j] > caller.gls.llk[max_llk]) max_llk=j;
-				for (int j=0; j<sample_ploidyP1; ++j) GLs[sample_ploidyP1 * i_site+j] = (unsigned char) std::min(static_cast<int>(-10*(caller.gls.llk[j]- max_llk)),255);
+				for (int j=0; j<sample_ploidyP1; ++j) GLs[sample_ploidyP1 * i_site+j] = (unsigned char) std::min(static_cast<int>(std::lround(-10*(caller.gls.llk[j]- caller.gls.llk[max_llk]))),255);
 				if (!(GLs[sample_ploidyP1 * i_site+0] == GLs[sample_ploidyP1 * i_site+1] && GLs[sample_ploidyP1 * i_site+0] == GLs[sample_ploidyP1 * i_site+sample_ploidy]))
 					G.vecG[i]->flat[i_site] = false;
 			}
@@ -452,11 +452,11 @@ void standard_errmod(call_t& caller, const variant* variant)
 
 	const int sploidy = caller.ploidy;
 
-	caller.gls.dp_ind = 0;
-	if (caller.gls.read_depth == 0) return;
+	if (caller.gls.read_depth == 0) { caller.gls.dp_ind = 0; return; }
 
 	if (!caller.snp_called)
 	{
+		caller.gls.dp_ind = 0;
 		int ii,k,j=0;
 	    if (caller.gls.read_depth > caller.bca.max_dp)
 	    {
@@ -465,7 +465,7 @@ void standard_errmod(call_t& caller, const variant* variant)
 	    	caller.gls.read_depth = caller.bca.max_dp;
 	    }
 	    std::fill(caller.bcr.p.begin(), caller.bcr.p.end(), 0.0f);
-	    std::sort(caller.bca.bases.begin(), caller.bca.bases.end());
+	    std::sort(caller.bca.bases.begin(), caller.bca.bases.begin() + caller.gls.read_depth);
 
 		while (j<caller.gls.read_depth)
 		{
@@ -509,12 +509,12 @@ void standard_errmod(call_t& caller, const variant* variant)
 	        	const float one_minus_err = calling_utils::log10_one_minus_err[qual];
 	        	const float err = calling_utils::log10_err[qual];
 
-	        	caller.bcr.p[base*N_ALLELES+base] += one_minus_err;
+				caller.bcr.p[base*N_ALLELES+base] += one_minus_err*n_identical_reads;
 
 				for (ii = 0; ii < N_ALLELES; ++ii)
 				{
 					if (ii==base) continue;
-					caller.bcr.p[ii*N_ALLELES+ii] += err;
+					caller.bcr.p[ii*N_ALLELES+ii] += err*n_identical_reads;
 				}
 	        }
 	        caller.gls.dp_ind+=n_identical_reads;

@@ -40,11 +40,11 @@ write_patch() {
   fi
 }
 
-# Later layers diff the working tree against the series base.
+# Layered patches name their base and, when frozen, their end commit.
 write_layer_patch() {
   output=$1
   shift
-  git -C "$repo_root" diff --binary --no-ext-diff "$series_base" -- "$@" \
+  git -C "$repo_root" diff --binary --no-ext-diff "$@" \
     > "$script_dir/$output"
   if [ ! -s "$script_dir/$output" ]; then
     echo "ERROR: generated patch is empty: $output" >&2
@@ -72,6 +72,7 @@ write_patch 0007-include-pthread-header-in-threaded-callers.patch \
   phase/src/caller/caller_header.h \
   split_reference/src/caller/caller_header.h
 write_layer_patch 0008-optimise-phase-kernels-bit-identical.patch \
+  "$series_base" 685da6457a673fad7d89932f3cd130fd02903395 -- \
   common/src/containers/bitmatrix.h \
   common/src/containers/ref_haplotype_set.cpp \
   common/src/containers/ref_haplotype_set.h \
@@ -86,6 +87,9 @@ write_layer_patch 0008-optimise-phase-kernels-bit-identical.patch \
   phase/src/models/phasing_hmm.cpp \
   phase/src/models/phasing_hmm.h
 write_layer_patch 0009-pin-floating-point-contraction.patch \
-  common.mk
+  "$series_base" 5f7e69792b3755ac7c9faa694f94a0b42d405ae4 -- common.mk
+write_layer_patch 0010-bam-likelihood-and-flat-het-corrections.patch \
+  5f7e69792b3755ac7c9faa694f94a0b42d405ae4 -- \
+  phase/src/io/genotype_bam_caller.cpp phase/src/models/phasing_hmm.cpp
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

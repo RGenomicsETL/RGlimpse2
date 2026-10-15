@@ -34,9 +34,20 @@ The patches in [`series`](series) are applied in order:
    either build produce the same bytes (`PHASE_SIMD_FLAGS="-mavx2 -mfma"`
    restores upstream's faster, numerically different build).
 
-Patches 1-7 are frozen at commit `095ebfeb09305ddb47237d04da37dcece9a707e8`
-(the end of that series); patch 8 and later ones are diffs against that
-commit, so they may touch files that earlier patches already changed.
+10. direct-alignment likelihood corrections adapted from upstream
+    [PR #323](https://github.com/odelaneau/GLIMPSE/pull/323), preserving the
+    non-observable-allele contract of patch 5, and complementary flat-site
+    heterozygous haplotypes from upstream commit
+    [`a18059b`](https://github.com/odelaneau/GLIMPSE/commit/a18059b72d249d32d067fd2a85e830350d7f3f45).
+
+Patches 1-7 are frozen at commit `095ebfeb09305ddb47237d04da37dcece9a707e8`.
+Patch 8 captures that base through `685da6457a673fad7d89932f3cd130fd02903395`;
+patch 9 captures the build flags through `5f7e69792b3755ac7c9faa694f94a0b42d405ae4`.
+Patch 10 is a diff against the latter commit. Layers may touch files that
+earlier patches already changed.
+
+Run `dev-notes/test-upstream-correctness.sh` for patch 10's native regression
+checks; it requires a C++17 compiler and HTSlib/Boost development libraries.
 
 `Single-ALT` describes the representation consumed by GLIMPSE2. A multiallelic
 source site must be decomposed into one record per ALT before reference splitting;
