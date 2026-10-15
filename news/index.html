@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9006</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9007</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,11 @@
       <small>Source: <a href="https://github.com/RGenomicsETL/RGlimpse2/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9007" id="rglimpse2-0009007">RGlimpse2 0.0.0.9007<a class="anchor" aria-label="anchor" href="#rglimpse2-0009007"></a></h2>
+<ul><li>Normalize direct-BAM likelihoods to the best genotype with nearest-integer PL rounding, preserve cached depth for split SNPs across non-observable alleles, downsample SNP reads without sorting discarded reads into the retained set, and count repeated haploid reads in likelihoods (upstream <a href="https://github.com/RGenomicsETL/RGlimpse2/issues/323" class="external-link">#323</a>).</li>
+<li>Sample complementary haplotypes at flat heterozygous sites (upstream commit <code>a18059b</code>). These corrections can change direct-alignment likelihoods and phased outputs.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9006" id="rglimpse2-0009006">RGlimpse2 0.0.0.9006<a class="anchor" aria-label="anchor" href="#rglimpse2-0009006"></a></h2>
 <ul><li>Read <code>R CMD config</code> values without make’s stderr, so warnings such as a clock-skew notice about <code>Makeconf</code> on a CI runner can no longer be taken as the compiler command (seen on R-devel for Windows arm64).</li>

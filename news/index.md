@@ -1,5 +1,17 @@
 # Changelog
 
+## RGlimpse2 0.0.0.9007
+
+- Normalize direct-BAM likelihoods to the best genotype with
+  nearest-integer PL rounding, preserve cached depth for split SNPs
+  across non-observable alleles, downsample SNP reads without sorting
+  discarded reads into the retained set, and count repeated haploid
+  reads in likelihoods (upstream
+  [\#323](https://github.com/RGenomicsETL/RGlimpse2/issues/323)).
+- Sample complementary haplotypes at flat heterozygous sites (upstream
+  commit `a18059b`). These corrections can change direct-alignment
+  likelihoods and phased outputs.
+
 ## RGlimpse2 0.0.0.9006
 
 - Read `R CMD config` values without make’s stderr, so warnings such as
