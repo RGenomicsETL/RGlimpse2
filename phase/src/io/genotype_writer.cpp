@@ -75,6 +75,13 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 	bcf_hdr_append(hdr, "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Phased genotypes\">");
 	bcf_hdr_append(hdr, "##FORMAT=<ID=DS,Number=1,Type=Float,Description=\"Genotype dosage\">");
 	bcf_hdr_append(hdr, "##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype posterior probabilities\">");
+	const bool export_samples = C.options.count("haplotype-samples");
+	const std::string sample_scope = V.chrid + ":" + std::to_string(V.input_start) + "-" + std::to_string(V.input_stop)
+		+ ":" + std::to_string(V.output_start) + "-" + std::to_string(V.output_stop);
+	if (export_samples) {
+		bcf_hdr_append(hdr, "##FORMAT=<ID=HS,Number=1,Type=Integer,Description=\"Actual rephased main-iteration allele samples: bits 2*d and 2*d+1 are haplotypes 0 and 1 for zero-based draw d; haploid second bits are zero; NMAIN draws; labels are local to INFO/HSC\">");
+		bcf_hdr_append(hdr, "##INFO=<ID=HSC,Number=1,Type=String,Description=\"HS draw scope: contig:input-start-input-stop:output-start-output-stop; iteration indices cannot be joined across scopes\">");
+	}
 	bcf_hdr_append(hdr, std::string("##NMAIN="+stb.str(n_main)).c_str());
 	bcf_hdr_append(hdr, std::string("##FPLOIDY="+stb.str(H.fploidy)).c_str());
 
@@ -88,7 +95,7 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 	int * genotypes = (int*)malloc(bcf_hdr_nsamples(hdr)*H.max_ploidy*sizeof(int));
 	float * dosages = (float*)malloc(bcf_hdr_nsamples(hdr)*1*sizeof(float));
 	float * posteriors = (float*)malloc(bcf_hdr_nsamples(hdr)*(H.max_ploidy+1)*sizeof(float));
-	//int * haplotypes = (int*)malloc(bcf_hdr_nsamples(hdr)*sizeof(int));
+	std::vector < int32_t > haplotypes(export_samples ? G.vecG.size() : 0);
 
 	//Ordered (key, pointer) set of at most three entries with std::map insert
 	//semantics (an equal key is not inserted), replacing a per-sample std::map
@@ -124,6 +131,7 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 		std::fill(&genotypes[0], &genotypes[0] + H.max_ploidy*G.vecG.size(), bcf_gt_phased(false));
 		for (int i = 0 ; i < G.vecG.size() ; i++)
 		{
+			if (export_samples) haplotypes[i] = G.vecG[i]->sampled_haplotypes[l];
 			// Initialialize output data in case of Ref/Ref genotype
 			float ds = 0.0f, gp0 = 1.0f, gp1 = 0.0f, gp2 = 0.0f;
 
@@ -205,6 +213,10 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 		bcf_update_genotypes(hdr, rec, genotypes, bcf_hdr_nsamples(hdr)*H.max_ploidy);
 		bcf_update_format_float(hdr, rec, "DS", dosages, bcf_hdr_nsamples(hdr)*1);
 		bcf_update_format_float(hdr, rec, "GP", posteriors, bcf_hdr_nsamples(hdr)*(H.max_ploidy+1));
+		if (export_samples) {
+			bcf_update_format_int32(hdr, rec, "HS", haplotypes.data(), haplotypes.size());
+			bcf_update_info_string(hdr, rec, "HSC", sample_scope.c_str());
+		}
 
 		//Write record
 		if (bcf_write1(fp, hdr, rec) ) vrb.error("Failed to write the record [" + V.chrid + ":" + std::to_string(V.vec_pos[l]->bp) + "_" + V.vec_pos[l]->ref + "_" + V.vec_pos[l]->alt +"] to file [" + std::string(fname) + "]");
@@ -214,7 +226,6 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
 	free(genotypes);
 	free(dosages);
 	free(posteriors);
-	//free(haplotypes);
 	bcf_destroy1(rec);
 	bcf_hdr_destroy(hdr);
 	if (hts_close(fp)) vrb.error("Non zero status when closing VCF/BCF file descriptor");

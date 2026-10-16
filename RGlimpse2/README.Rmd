@@ -151,6 +151,25 @@ CRAM input additionally requires an explicit reference FASTA and its adjacent
 symbolic and other non-observable reference alleles remain in the haplotype
 scaffold with flat read likelihoods.
 
+Set `haplotype_samples = TRUE` in any phase wrapper to retain and export the
+actual allele samples after rephasing in each main iteration. `FORMAT/HS` packs
+two allele bits per draw: bits `2*d` and `2*d+1` are the first and second
+haplotypes for zero-based main iteration `d`. `NMAIN` gives the draw count
+(1–15); haploid second bits are zero. Dense retention costs four bytes per
+input site and sample, including chunk buffers, independently of the draw
+count within this bound. Export leaves the existing GT/DS/GP calculations and
+random-number sequence unchanged.
+
+These samples preserve GLIMPSE2's linked rephasing of alleles sampled from
+per-site imputation marginals. They are not sampled reference-copying paths or
+soft per-haplotype probabilities. `INFO/HSC` identifies the input/output chunk
+intervals; draw indices are local to that scope. Ligation preserves `HSC` and
+swaps both allele bits of every diploid draw when it swaps GT. It rejects HS
+chunks with different `NMAIN` counts or mixtures of chunks with and without
+samples. A consumer must retain scope and must not concatenate the same
+iteration index across independently sampled chunks into a global draw.
+The native export option requires VCF/BCF and rejects checkpoint input/output.
+
 The split-reference, phase, and ligate wrappers follow the same contract. They
 do not search `PATH`, overwrite an output, build shell command strings, or
 retain workflow state. Invalid calls signal typed

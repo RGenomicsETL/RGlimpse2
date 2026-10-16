@@ -92,6 +92,7 @@ local({
     keep_duplicates = TRUE,
     burnin = 2L,
     main = 3L,
+    haplotype_samples = TRUE,
     ne = 120000L,
     pbwt_depth = 8L,
     pbwt_modulo_cm = 0.25,
@@ -112,6 +113,7 @@ local({
   )
 
   arguments <- readLines(output_bcf, warn = FALSE, encoding = "UTF-8")
+  expect_true("--haplotype-samples" %in% arguments)
   argument_value <- function(flag) {
     position <- match(flag, arguments)
     if (is.na(position) || position == length(arguments)) return(NA_character_)

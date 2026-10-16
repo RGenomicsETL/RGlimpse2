@@ -42,6 +42,7 @@ genotype::~genotype() {
 void genotype::free() {
 	GL.clear();
 	stored_data.clear();
+	sampled_haplotypes.clear();
 	H0.clear();
 	H1.clear();
 }
@@ -122,6 +123,15 @@ void genotype::sampleHaplotypeH0(const std::vector < float > & HP0) {
 //Assumes diploid, HP1 exists.
 void genotype::sampleHaplotypeH1(const std::vector < float > & HP1) {
 	for (int l = 0 ; l < n_variants ; l ++) H1[l] = (rng.getFloat() > HP1[2*l]);
+}
+
+void genotype::storeHaplotypeSample() {
+	// Admission bounds main iterations to 1..15; stored_cnt is zero based.
+	const int shift = 2 * stored_cnt;
+	for (int l = 0; l < n_variants; ++l) {
+		const uint32_t alleles = uint32_t(H0[l]) | (ploidy > 1 ? uint32_t(H1[l]) << 1 : 0U);
+		sampled_haplotypes[l] |= alleles << shift;
+	}
 }
 
 void genotype::storeGenotypePosteriorsAndHaplotypes(const std::vector < float > & HP0)

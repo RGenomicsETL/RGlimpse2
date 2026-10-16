@@ -14,6 +14,8 @@
 #' @param input_field Genotype likelihood field, `"PL"` or `"GL"`.
 #' @param burnin Number of burn-in iterations.
 #' @param main Number of main iterations, at most 15.
+#' @param haplotype_samples Export actual rephased main-iteration allele draws
+#'   as packed `FORMAT/HS`, with chunk-local `INFO/HSC` scope. See Details.
 #' @param ne Positive effective diploid population size.
 #' @param pbwt_depth Positive PBWT neighbour depth.
 #' @param pbwt_modulo_cm Positive PBWT selection spacing in cM.
@@ -24,6 +26,15 @@
 #'   than use the default flat-likelihood scaffold behavior.
 #' @param log Empty or one absolute log output path.
 #' @return `RGlimpse2RunResult` or an `RGlimpse2ErrorValue`.
+#' @details With `haplotype_samples = TRUE`, bits `2*d` and `2*d+1` of `HS`
+#'   contain the first and second sampled alleles for zero-based main iteration
+#'   `d`; haploid second bits are zero. `NMAIN` declares the draw count. Samples
+#'   are retained after GLIMPSE2's linked rephasing of alleles sampled from
+#'   per-site imputation marginals. They are not reference-copying paths or soft
+#'   haplotype probabilities. Iteration indices are local to one chunk; do not
+#'   concatenate them across `HSC` scopes into a global phase draw. Ligation
+#'   preserves scope and reorients both alleles in each draw when it swaps GT.
+#'   Export does not consume random numbers or change GT, DS, or GP.
 #' @export
 rglimpse2_phase <- function(
   input_gl,
@@ -43,7 +54,8 @@ rglimpse2_phase <- function(
   k_pbwt = 2000L,
   impute_reference_only_variants = FALSE,
   use_gl_indels = FALSE,
-  log = character()
+  log = character(),
+  haplotype_samples = FALSE
 ) {
   .rgl_contract_call(
     code = "invalid_phase_request",
@@ -73,6 +85,7 @@ rglimpse2_phase <- function(
       input_field <- match.arg(input_field)
       burnin <- .rgl_assert_integer(burnin, "burnin", 0L, .Machine$integer.max)
       main <- .rgl_assert_integer(main, "main", 1L, 15L)
+      haplotype_samples <- .rgl_assert_flag(haplotype_samples, "haplotype_samples")
       ne <- .rgl_assert_integer(ne, "ne", 1L, .Machine$integer.max)
       pbwt_depth <- .rgl_assert_integer(
         pbwt_depth,
@@ -113,6 +126,7 @@ rglimpse2_phase <- function(
         "--threads", "1",
         "--burnin", as.character(burnin),
         "--main", as.character(main),
+        if (haplotype_samples) "--haplotype-samples",
         "--ne", as.character(ne),
         "--pbwt-depth", as.character(pbwt_depth),
         "--pbwt-modulo-cm", .rgl_cli_number(pbwt_modulo_cm),

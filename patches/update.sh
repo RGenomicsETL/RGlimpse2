@@ -89,7 +89,12 @@ write_layer_patch 0008-optimise-phase-kernels-bit-identical.patch \
 write_layer_patch 0009-pin-floating-point-contraction.patch \
   "$series_base" 5f7e69792b3755ac7c9faa694f94a0b42d405ae4 -- common.mk
 write_layer_patch 0010-bam-likelihood-and-flat-het-corrections.patch \
-  5f7e69792b3755ac7c9faa694f94a0b42d405ae4 -- \
+  5f7e69792b3755ac7c9faa694f94a0b42d405ae4 2f79f47711da474f6565546d51274c84ae8b4010 -- \
   phase/src/io/genotype_bam_caller.cpp phase/src/models/phasing_hmm.cpp
+write_layer_patch 0011-retain-chunk-local-haplotype-samples.patch \
+  2f79f47711da474f6565546d51274c84ae8b4010 -- \
+  common/src/objects/genotype.cpp common/src/objects/genotype.h \
+  phase/src/caller/caller_algorithm.cpp phase/src/caller/caller_parameters.cpp \
+  phase/src/io/genotype_writer.cpp ligate/src/ligater/ligater_algorithm.cpp
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

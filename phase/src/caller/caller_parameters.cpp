@@ -91,6 +91,7 @@ void caller::declare_options() {
 	bpo::options_description opt_output ("Output parameters");
 	opt_output.add_options()
 			("output,O", bpo::value< std::string >(), "Phased and imputed haplotypes in VCF/BCF/BGEN format")
+			("haplotype-samples", "Export actual post-burn-in rephased allele samples as FORMAT/HS (VCF/BCF only; no checkpoints)")
 			("contigs-fai", bpo::value< std::string >(), "If specified, header contig names and their lengths are copied from the provided fasta index file (.fai). This allows to create imputed whole-genome files as contigs are present and can be easily merged by bcftools")
 			("bgen-bits", boost::program_options::value< int >()->default_value(8), "(Expert setting) Only used toghether when the output is in BGEN file format. Specifies the number of bits to be used for the encoding probabilities of the output BGEN file. If the output is in the .vcf[.gz]/.bcf format, this value is ignored. Accepted values: 1-32")
 			("bgen-compr", boost::program_options::value< std::string >()->default_value("zstd"), "(Expert setting) Only used toghether when the output is in BGEN file format. Specifies the compression of the output BGEN file. If the output is in the .vcf[.gz]/.bcf format, this value is ignored. Accepted values: [no,zlib,zstd]")
@@ -138,6 +139,10 @@ void caller::check_options() {
 
 	if (options["main"].as < int > () > 15)
 		vrb.error("Maximum value for --main is 15. To run more iteration, increase --burn");
+	if (options.count("haplotype-samples") && options["main"].as < int > () < 1)
+		vrb.error("Haplotype sample export requires --main between 1 and 15");
+	if (options.count("haplotype-samples") && (options.count("checkpoint-file-in") || options.count("checkpoint-file-out")))
+		vrb.error("Haplotype sample export does not support checkpoint input or output");
 
 	if (options["threads"].as < int > () < 1)
 		vrb.error("Number of threads is a strictly positive number.");
@@ -193,6 +198,7 @@ void caller::check_options() {
 	}
 	else if (ext0 =="bgen")
 	{
+		if (options.count("haplotype-samples")) vrb.error("Haplotype sample export requires VCF/BCF output");
 		output_fmt = OutputFormat::BGEN;
 		std::string ocompr = options["bgen-compr"].as<std::string>();
 		if (ocompr == "zstd") output_compr = OutputCompression::ZSTD;

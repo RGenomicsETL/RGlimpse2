@@ -40,10 +40,18 @@ The patches in [`series`](series) are applied in order:
     heterozygous haplotypes from upstream commit
     [`a18059b`](https://github.com/odelaneau/GLIMPSE/commit/a18059b72d249d32d067fd2a85e830350d7f3f45).
 
+11. opt-in dense retention of actual post-burn-in, post-rephasing allele
+    samples, packed in FORMAT/HS with a chunk-local INFO/HSC draw scope.
+    Ligation swaps both allele bits in every draw when it swaps GT and
+    preserves HSC; it does not join independently sampled chunks into global
+    draws. Checkpoint input/output and BGEN are explicitly unsupported with
+    sample export; existing default behavior is preserved.
+
 Patches 1-7 are frozen at commit `095ebfeb09305ddb47237d04da37dcece9a707e8`.
 Patch 8 captures that base through `685da6457a673fad7d89932f3cd130fd02903395`;
 patch 9 captures the build flags through `5f7e69792b3755ac7c9faa694f94a0b42d405ae4`.
-Patch 10 is a diff against the latter commit. Layers may touch files that
+Patch 10 is frozen at `2f79f47711da474f6565546d51274c84ae8b4010`;
+patch 11 is a diff against that commit. Layers may touch files that
 earlier patches already changed.
 
 Run `dev-notes/test-upstream-correctness.sh` for patch 10's native regression

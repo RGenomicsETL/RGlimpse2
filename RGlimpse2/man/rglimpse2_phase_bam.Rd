@@ -31,7 +31,8 @@ rglimpse2_phase_bam(
   pbwt_modulo_cm = 0.1,
   k_init = 1000L,
   k_pbwt = 2000L,
-  log = character()
+  log = character(),
+  haplotype_samples = FALSE
 )
 }
 \arguments{
@@ -95,6 +96,9 @@ paired.}
 \item{k_init, k_pbwt}{Positive conditioning-state limits.}
 
 \item{log}{Empty or one absolute log output path.}
+
+\item{haplotype_samples}{Export actual chunk-local main-iteration allele
+draws as \code{FORMAT/HS}. See \code{\link[=rglimpse2_phase]{rglimpse2_phase()}} for encoding and scope.}
 }
 \value{
 \code{RGlimpse2RunResult} or an \code{RGlimpse2ErrorValue}.

@@ -98,6 +98,10 @@ void ligater::phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf)
 	if ( gt_stride < 1 || gt_stride > 2 )
 		vrb.error("Unsupported GT ploidy while updating phase");
 	if ( gt_stride == 1 ) return;
+	int32_t * hs = NULL;
+	int mhs = 0;
+	const int nhs = bcf_get_format_int32(hdr, line, "HS", &hs, &mhs);
+	if (nhs > 0 && nhs != n_samples) vrb.error("Malformed HS field: expected one packed sample per individual");
 	for (int i=0; i<n_samples; i++)
     {
 		if ( !swap_phase[uphalf][i] ) continue;
@@ -108,8 +112,15 @@ void ligater::phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf)
         const int gt1 = bcf_gt_phased(bcf_gt_allele(gt[0])==1);
         gt[0] = gt0;
         gt[1] = gt1;
+		if (nhs > 0 && hs[i] != bcf_int32_missing) {
+			if (hs[i] < 0 || uint32_t(hs[i]) >= (1U << 30)) vrb.error("Malformed HS field: expected at most 15 two-bit draws");
+			const uint32_t packed = hs[i];
+			hs[i] = ((packed & 0x15555555U) << 1) | ((packed & 0x2aaaaaaaU) >> 1);
+		}
     }
     bcf_update_genotypes(hdr,line,GTa,nGTs);
+	if (nhs > 0) bcf_update_format_int32(hdr, line, "HS", hs, nhs);
+	free(hs);
 }
 
 void ligater::update_distances(const int nGTsa, const int nGTsb)
@@ -248,11 +259,23 @@ void ligater::ligate() {
 	bcf_hdr_t * out_hdr = NULL;
 	bcf1_t *line_t = bcf_init();
 	std::vector<int> start_pos(nfiles);
+	std::string samples_nmain;
+	bool samples_present = false;
 
 	for (int f = 0, prev_chrid = -1 ; f < nfiles ; f ++)
 	{
 		htsFile *fp = hts_open(filenames[f].c_str(), "r"); if ( !fp ) vrb.error("Failed to open [" + filenames[f] + "] (" + std::string(strerror(errno)) + "). The file may be missing, unreadable, or (if cloud-streamed) the read may have failed.");
 		bcf_hdr_t *hdr = bcf_hdr_read(fp); if ( !hdr ) vrb.error("Failed to parse header of [" + filenames[f] +"]. The file may be malformed or truncated (e.g. an incomplete cloud-stream).");
+		const bool has_samples = bcf_hdr_get_hrec(hdr, BCF_HL_FMT, "ID", "HS", NULL) != NULL;
+		if (f == 0) samples_present = has_samples;
+		else if (has_samples != samples_present) vrb.error("Cannot ligate chunks with and without HS samples");
+		if (has_samples) {
+			bcf_hrec_t * nmain = bcf_hdr_get_hrec(hdr, BCF_HL_GEN, "NMAIN", NULL, NULL);
+			if (!nmain || !nmain->value || !bcf_hdr_get_hrec(hdr, BCF_HL_INFO, "ID", "HSC", NULL))
+				vrb.error("HS chunks require NMAIN and INFO/HSC draw scope metadata");
+			if (f == 0) samples_nmain = nmain->value;
+			else if (samples_nmain != nmain->value) vrb.error("Cannot ligate HS chunks with different NMAIN draw counts");
+		}
 		out_hdr = bcf_hdr_merge(out_hdr,hdr);
         if ( bcf_hdr_nsamples(hdr) != bcf_hdr_nsamples(out_hdr) ) vrb.error("Different number of samples in " + filenames[f] + ".");
         for (int j=0; j<bcf_hdr_nsamples(hdr); j++)
@@ -410,7 +433,7 @@ void ligater::ligate() {
             {
             	const bool uphalf = !bcf_sr_has_line(sr,0);
             	line = bcf_sr_get_line(sr,uphalf);
-				write_record(out_fp, out_hdr, sr->readers[0].header, line,uphalf);
+				write_record(out_fp, out_hdr, sr->readers[uphalf].header, line,uphalf);
                 prev_pos[uphalf]=line->pos;
                 prev_readers_size = sr->nreaders;
 				n_variants++;

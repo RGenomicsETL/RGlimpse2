@@ -68,6 +68,7 @@ local({
     keep_duplicates = TRUE,
     burnin = 2L,
     main = 3L,
+    haplotype_samples = TRUE,
     ne = 120000L,
     pbwt_depth = 8L,
     pbwt_modulo_cm = 0.25,
@@ -93,6 +94,7 @@ local({
   expect_identical(argument_value("--output"), output_bcf)
   expect_identical(argument_value("--seed"), "20260728")
   expect_identical(argument_value("--threads"), "1")
+  expect_true("--haplotype-samples" %in% arguments)
   expect_identical(argument_value("--ind-name"), "sample-A")
   expect_identical(argument_value("--mapq"), "17")
   expect_identical(argument_value("--baseq"), "23")

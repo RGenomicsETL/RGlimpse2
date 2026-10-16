@@ -73,6 +73,7 @@ void caller::phase_individual(const int id_worker, const int id_job) {
 
 	if (current_stage == STAGE_MAIN)
 	{
+		if (options.count("haplotype-samples")) G.vecG[id_job]->storeHaplotypeSample();
 		if (ploidy > 1) G.vecG[id_job]->storeGenotypePosteriorsAndHaplotypes(HP0[id_worker], HP1[id_worker]);
 		else G.vecG[id_job]->storeGenotypePosteriorsAndHaplotypes(HP0[id_worker]);
 	}
@@ -221,6 +222,9 @@ void caller::read_checkpoint_if_available() {
 }
 
 void caller::phase_loop() {
+	if (options.count("haplotype-samples"))
+		for (genotype * g : G.vecG) g->sampled_haplotypes.assign(g->n_variants, 0U);
+
 	//steup iteration counters
 	current_stage = STAGE_INIT;
 	current_iteration = -1; //increment will make current_iteration 0 if no checkpoint loaded
