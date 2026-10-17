@@ -106,10 +106,10 @@ void ligater::phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf)
     {
 		if ( !swap_phase[uphalf][i] ) continue;
 		int32_t *gt = &GTa[i*gt_stride];
-		if ( bcf_gt_is_missing(gt[0]) || gt[1]==bcf_int32_vector_end ) continue;
+		if ( bcf_gt_is_missing(gt[0]) || bcf_gt_is_missing(gt[1]) || gt[1]==bcf_int32_vector_end ) continue;
 		if (!bcf_gt_is_phased(gt[1])) continue;
-        const int gt0 = bcf_gt_phased(bcf_gt_allele(gt[1])==1);
-        const int gt1 = bcf_gt_phased(bcf_gt_allele(gt[0])==1);
+        const int gt0 = bcf_gt_unphased(bcf_gt_allele(gt[1]));
+        const int gt1 = bcf_gt_phased(bcf_gt_allele(gt[0]));
         gt[0] = gt0;
         gt[1] = gt1;
 		if (nhs > 0 && hs[i] != bcf_int32_missing) {
@@ -151,12 +151,44 @@ void ligater::update_distances(const int nGTsa, const int nGTsb)
 	}
 }
 
+bool ligater::matching_alleles(bcf1_t *left, bcf1_t *right)
+{
+	if (left->n_allele != right->n_allele) return false;
+	bcf_unpack(left, BCF_UN_STR);
+	bcf_unpack(right, BCF_UN_STR);
+	for (int allele = 0; allele < left->n_allele; ++allele)
+		if (std::strcmp(left->d.allele[allele], right->d.allele[allele])) return false;
+	return true;
+}
+
 void ligater::write_record(htsFile *fd, bcf_hdr_t * out_hdr, bcf_hdr_t * hdr_in, bcf1_t *line, const bool uphalf)
 {
 	if ( nswap[uphalf] ) phase_update(hdr_in, line, uphalf);
+	bcf_translate(out_hdr, hdr_in, line);
+	hdr_in = out_hdr;
+	int nGTs = bcf_get_genotypes(hdr_in, line, &GTa, &mGTa);
+	if (nGTs <= 0 || nsamples <= 0 || nGTs % nsamples)
+		vrb.error("Malformed GT field while recording ligation phase sets");
+	const int stride = nGTs / nsamples;
+	if (stride < 1 || stride > 2) vrb.error("Unsupported GT ploidy while recording ligation phase sets");
+	std::fill(phase_set_values.begin(), phase_set_values.end(), bcf_int32_missing);
+	std::fill(phase_flip_values.begin(), phase_flip_values.end(), 0);
+	for (int sample = 0; sample < nsamples; ++sample) {
+		int32_t *gt = &GTa[sample * stride];
+		if (stride == 1 || gt[1] == bcf_int32_vector_end) continue;
+		if (bcf_gt_is_missing(gt[0]) || bcf_gt_is_missing(gt[1]) || !bcf_gt_is_phased(gt[1])) continue;
+		phase_set_values[sample] = phase_set[uphalf][sample];
+		phase_flip_values[sample] = swap_phase[uphalf][sample];
+	}
+	const int32_t chunk = source_chunk[uphalf] + 1;
+	if (bcf_update_info_int32(hdr_in, line, "LIGATE_CHUNK", &chunk, 1) < 0)
+		vrb.error("Failed to record the selected ligation chunk");
+	if (bcf_update_format_int32(hdr_in, line, "PS", phase_set_values.data(), nsamples) < 0)
+		vrb.error("Failed to record ligation phase sets");
+	if (bcf_update_format_int32(hdr_in, line, "LIGATE_FLIP", phase_flip_values.data(), nsamples) < 0)
+		vrb.error("Failed to record ligation phase orientation");
 	//remove_info(out_hdr,line);
 	//remove_format(out_hdr,line);
-	bcf_translate(out_hdr, hdr_in, line);
 	if (bcf_write(fd, out_hdr, line) ) vrb.error("Failed to write the record output to file");
 }
 
@@ -189,9 +221,8 @@ void ligater::scan_overlap(const int ifname, const char * seek_chr, int seek_pos
 			continue;
 		}
 		line0 =  bcf_sr_get_line(sr, 0);
-		if (line0->n_allele != 2) continue;
-
 		line1 =  bcf_sr_get_line(sr, 1);
+		if (!matching_alleles(line0, line1)) continue;
 		//bcf_unpack(line0,BCF_UN_FMT);
 		//bcf_unpack(line1,BCF_UN_FMT);
 		int nGTsa = bcf_get_genotypes(sr->readers[0].header, line0, &GTa, &mGTa);
@@ -218,11 +249,12 @@ void ligater::scan_overlap(const int ifname, const char * seek_chr, int seek_pos
 	{
 		swap_phase[1][i] = nmatch[i] < nmism[i];
 		nswap[1] += swap_phase[1][i];
+		if (nmatch[i] != nmism[i]) phase_set[1][i] = phase_set[0][i];
 
 		stats_all.push(nmatch[i] + nmism[i]);
 
-		float f = 99;
-        if ( nmatch[i] && nmism[i] )
+		float f = nmatch[i] == nmism[i] ? 0 : 99;
+        if ( nmatch[i] && nmism[i] && nmatch[i] != nmism[i] )
         {
             // Entropy-inspired quality. The factor 0.7 shifts and scales to (0,1)
            float f0 = (float)nmatch[i]/(nmatch[i]+nmism[i]);
@@ -234,7 +266,7 @@ void ligater::scan_overlap(const int ifname, const char * seek_chr, int seek_pos
 		nmism[i]  = 0;
 	}
 
-	if (n_sites_buff <=0) vrb.error("Overlap is empty");
+	if (n_sites_buff <=0) vrb.error("Overlap contains no identical ordered allele records");
 	nsites_buff_d2.push_back(n_sites_buff/2);
 	vrb.print("Buf " + stb.str(nsites_buff_d2.size() -1) + " ["+std::string(seek_chr)+":"+stb.str(seek_pos+1)+"-"+stb.str(last_pos+1)+"] [L_isec=" + stb.str(n_sites_buff) + " / L_tot=" + stb.str(n_sites_tot) + "] [Avg #hets=" + stb.str(stats_all.mean()) + "] [Switch rate=" + stb.str(nswap[1]*1.0 / nsamples) + "] [Avg phaseQ=" + stb.str(phaseq.mean()) + "]");
 }
@@ -253,12 +285,14 @@ void ligater::ligate() {
 	if (fname.size() > 3 && fname.substr(fname.size()-3) == "bcf") { file_format = "wb"; file_type = OFILE_BCFC; }
 	bcf_srs_t * sr =  bcf_sr_init();
 	sr->require_index = 1;
+	sr->collapse = COLLAPSE_NONE;
 	int n_threads = options["threads"].as < int > ();
 	if (n_threads > 1) if (bcf_sr_set_threads(sr, n_threads) < 0) vrb.error("Failed to create threads");
 
 	bcf_hdr_t * out_hdr = NULL;
 	bcf1_t *line_t = bcf_init();
 	std::vector<int> start_pos(nfiles);
+	std::vector<int> first_positions(nfiles);
 	std::string samples_nmain;
 	bool samples_present = false;
 
@@ -266,6 +300,8 @@ void ligater::ligate() {
 	{
 		htsFile *fp = hts_open(filenames[f].c_str(), "r"); if ( !fp ) vrb.error("Failed to open [" + filenames[f] + "] (" + std::string(strerror(errno)) + "). The file may be missing, unreadable, or (if cloud-streamed) the read may have failed.");
 		bcf_hdr_t *hdr = bcf_hdr_read(fp); if ( !hdr ) vrb.error("Failed to parse header of [" + filenames[f] +"]. The file may be malformed or truncated (e.g. an incomplete cloud-stream).");
+		if (bcf_hdr_get_hrec(hdr, BCF_HL_FMT, "ID", "PS", NULL))
+			vrb.error("Input PS annotations are unsupported: ligation requires one local phase set per chunk and sample");
 		const bool has_samples = bcf_hdr_get_hrec(hdr, BCF_HL_FMT, "ID", "HS", NULL) != NULL;
 		if (f == 0) samples_present = has_samples;
 		else if (has_samples != samples_present) vrb.error("Cannot ligate chunks with and without HS samples");
@@ -288,6 +324,9 @@ void ligater::ligate() {
             int chrid = bcf_hdr_id2int(out_hdr,BCF_DT_CTG,bcf_seqname(hdr,line_t));
             start_pos[f] = chrid==prev_chrid ? line_t->pos : -1;
             prev_chrid = chrid;
+			first_positions[f] = line_t->pos + 1;
+			if (start_pos[f] != -1 && first_positions[f] <= first_positions[f - 1])
+				vrb.error("Adjacent chunks on one contig must have strictly increasing first record positions");
         }
         bcf_hdr_destroy(hdr);
         if ( hts_close(fp)!=0 ) vrb.error("Close failed: " + filenames[f] + ".");
@@ -327,6 +366,18 @@ void ligater::ligate() {
 
 	nswap = {0,0};
 	swap_phase = {std::vector<bool>(nsamples, false), std::vector<bool>(nsamples, false)};
+	phase_set = {std::vector<int32_t>(nsamples, 0), std::vector<int32_t>(nsamples, 0)};
+	phase_set_values.resize(nsamples);
+	phase_flip_values.resize(nsamples);
+	const char * phase_headers[] = {
+		"##INFO=<ID=LIGATE_CHUNK,Number=1,Type=Integer,Description=\"One-based selected chunk in the ordered ligation input list\">",
+		"##FORMAT=<ID=PS,Number=1,Type=Integer,Description=\"Phase-set start; absent or tied informative overlap starts a separate set per sample\">",
+		"##FORMAT=<ID=LIGATE_FLIP,Number=1,Type=Integer,Description=\"Whether diploid GT and HS allele pairs were swapped from the selected chunk\">"
+	};
+	for (const char * header : phase_headers) {
+		if (bcf_hdr_append(out_hdr, header) < 0) vrb.error("Failed to append ligation metadata headers");
+	}
+	if (bcf_hdr_sync(out_hdr) < 0) vrb.error("Failed to synchronize ligation metadata headers");
 	nmatch = std::vector < int > (nsamples, 0);
 	nmism = std::vector < int > (nsamples, 0);
 
@@ -369,6 +420,7 @@ void ligater::ligate() {
     std::array<int,2> prev_pos = {0,0};
     int first_pos = 0;
     int ifname = 0;
+	bool overlap_scanned = false;
 
 	vrb.bullet("#samples = " + stb.str(nsamples));
 	vrb.print("");
@@ -380,8 +432,17 @@ void ligater::ligate() {
         int new_file = 0;
         while ( sr->nreaders < 2 && ifname < nfiles )
         {
+			if (sr->nreaders == 0 && start_pos[ifname] != -1)
+				vrb.error("Adjacent chunks have no overlapping records");
             if ( !bcf_sr_add_reader (sr, filenames[ifname].c_str())) vrb.error("Failed to open/index [" + filenames[ifname] + "]: " + std::string(bcf_sr_strerror(sr->errnum)) + ". The file may be missing, malformed, or (if cloud-streamed) the read may have failed.");
             new_file = 1;
+			source_chunk[sr->nreaders - 1] = ifname;
+			phase_set[sr->nreaders - 1].assign(nsamples, first_positions[ifname]);
+			if (sr->nreaders == 1) {
+				nswap[0] = 0;
+				swap_phase[0].assign(nsamples, false);
+			}
+			overlap_scanned = false;
             ifname++;
             if ( start_pos[ifname-1]==-1 ) break;   // new chromosome, start with only one file open
             if ( ifname < nfiles && start_pos[ifname]==-1 ) break; // next file starts on a different chromosome
@@ -402,7 +463,13 @@ void ligater::ligate() {
         int nret;
         while ( (nret = bcf_sr_next_line(sr)) )
         {
-            if ( !bcf_sr_has_line(sr,0) ) if ( bcf_sr_region_done(sr,0) )  bcf_sr_remove_reader(sr, 0);
+            if ( !bcf_sr_has_line(sr,0) ) if ( bcf_sr_region_done(sr,0) ) {
+				bcf_sr_remove_reader(sr, 0);
+				nswap[0] = nswap[1];
+				swap_phase[0] = swap_phase[1];
+				phase_set[0] = phase_set[1];
+				source_chunk[0] = source_chunk[1];
+			}
 
             // Get a line to learn about current position
             for (i=0; i<sr->nreaders; i++) if ( bcf_sr_has_line(sr,i) ) break;
@@ -414,20 +481,29 @@ void ligater::ligate() {
 
             //  Check if the position overlaps with the next, yet unopened, reader
             int must_seek = 0;
+			int earliest_start = line->pos;
             while ( ifname < nfiles && start_pos[ifname]!=-1 && line->pos >= start_pos[ifname] )
             {
                 must_seek = 1;
+				earliest_start = std::min(earliest_start, start_pos[ifname]);
                 if ( !bcf_sr_add_reader(sr, filenames[ifname].c_str())) vrb.error("Failed to open/index [" + filenames[ifname] + "]: " + std::string(bcf_sr_strerror(sr->errnum)) + ". The file may be missing, malformed, or (if cloud-streamed) the read may have failed.");
                 if  (sr->nreaders>2) vrb.error("Three files overlapping at position: " + std::to_string(line->pos+1));
+				source_chunk[1] = ifname;
+				phase_set[1].assign(nsamples, first_positions[ifname]);
+				overlap_scanned = false;
                 ifname++;
             }
             if ( must_seek )
             {
-                bcf_sr_seek(sr, bcf_seqname(sr->readers[i].header,line), line->pos);
-                seek_pos = line->pos;
+				bcf_sr_seek(sr, bcf_seqname(sr->readers[i].header,line), earliest_start);
+				seek_pos = earliest_start;
                 seek_chr = bcf_hdr_name2id(out_hdr, bcf_seqname(sr->readers[i].header,line));
                 continue;
             }
+			if (sr->nreaders == 2 && !overlap_scanned) {
+				scan_overlap(ifname, bcf_seqname(sr->readers[i].header, line), line->pos);
+				overlap_scanned = true;
+			}
 
             if ( sr->nreaders>1 && ((!bcf_sr_has_line(sr,0) && !bcf_sr_region_done(sr,0)) || (!bcf_sr_has_line(sr,1) && !bcf_sr_region_done(sr,1))) )
             {
@@ -457,20 +533,28 @@ void ligater::ligate() {
     				vrb.wait("Cnk " + stb.str(ifname-1) + " [" + prev_chr + ":" + stb.str(first_pos) + "-]");
             		//after a buffer we go back to one reader. Chunk 1 is now chunk 0.
     				n_sites_buff = 0;
-            		nswap[0]=nswap[1];
-            		swap_phase[0] = swap_phase[1];
     			}
 				line = bcf_sr_get_line(sr,i);
-    			write_record(out_fp, out_hdr, sr->readers[0].header, line,i);
+				write_record(out_fp, out_hdr, sr->readers[i].header, line,i);
             	prev_pos[i]=line->pos;
             }
             else
             {
+				bcf1_t *left = bcf_sr_get_line(sr, 0);
+				bcf1_t *right = bcf_sr_get_line(sr, 1);
+				if (!matching_alleles(left, right)) {
+					write_record(out_fp, out_hdr, sr->readers[0].header, left, false);
+					write_record(out_fp, out_hdr, sr->readers[1].header, right, true);
+					prev_pos[0] = left->pos;
+					prev_pos[1] = right->pos;
+					prev_readers_size = sr->nreaders;
+					n_variants += 2;
+					continue;
+				}
             	if (n_sites_buff==0)
             	{
             		prev_chr = std::string(bcf_seqname(sr->readers[i].header,line));
     				vrb.print("Cnk " + stb.str(ifname-2) + " [" + prev_chr + ":" + stb.str(first_pos) + "-" + stb.str(prev_pos[0] + 1) + "] [L=" + stb.str(n_variants-n_variants_at_start_cnk) + "]" );
-            		scan_overlap(ifname, bcf_seqname(sr->readers[i].header,line), line->pos);
             	}
 
 				const bool uphalf = n_sites_buff >= nsites_buff_d2.back();

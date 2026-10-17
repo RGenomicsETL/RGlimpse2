@@ -9,3 +9,4 @@
 0009-pin-floating-point-contraction.patch
 0010-bam-likelihood-and-flat-het-corrections.patch
 0011-retain-chunk-local-haplotype-samples.patch
+0012-ligate-diploid-alleles-and-phase-sets.patch

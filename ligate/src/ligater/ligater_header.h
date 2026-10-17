@@ -46,6 +46,10 @@ public:
 
 	std::array<int,2> nswap;
 	std::array<std::vector<bool>,2> swap_phase;
+	std::array<std::vector<int32_t>,2> phase_set;
+	std::array<int,2> source_chunk;
+	std::vector<int32_t> phase_set_values;
+	std::vector<int32_t> phase_flip_values;
 	std::vector < int > nmatch;
 	std::vector < int > nmism;
 
@@ -78,6 +82,7 @@ public:
 	int update_switching();
 	void update_distances(const int nGTsa, const int nGTsb);
 	void phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf);
+	bool matching_alleles(bcf1_t *left, bcf1_t *right);
 	void remove_info(bcf_hdr_t *hdr, bcf1_t *line);
 	void remove_format(bcf_hdr_t *hdr, bcf1_t *line);
 	void write_record(htsFile *, bcf_hdr_t * ,  bcf_hdr_t * ,bcf1_t *, const bool uphalf);

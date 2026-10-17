@@ -14,7 +14,9 @@ local({
     writer$addINFO("AC", "A", "Integer", "Alternate allele count")
     writer$addINFO("AN", "1", "Integer", "Total allele count")
     writer$addFORMAT("GT", "1", "String", "Phased haploid genotype")
-    for (sample in samples) writer$addSample(sample)
+    for (sample in samples) {
+      writer$addSample(sample)
+    }
 
     for (position in positions) {
       global_index <- (position - 100L) %/% 50L + 1L
@@ -66,15 +68,30 @@ local({
   reader <- vcfppR::vcfreader$new(output)
   expect_identical(reader$samples(), samples)
   records <- character()
-  while (reader$variant()) records <- c(records, reader$line())
+  while (reader$variant()) {
+    records <- c(records, reader$line())
+  }
   expect_identical(length(records), 17L)
 
   fields <- strsplit(records, "\t", fixed = TRUE)
-  positions <- vapply(fields, function(record) as.integer(record[[2L]]), integer(1L))
+  positions <- vapply(
+    fields,
+    function(record) as.integer(record[[2L]]),
+    integer(1L)
+  )
   expect_identical(positions, seq(100L, 900L, 50L))
   for (index in seq_along(fields)) {
-    observed <- fields[[index]][-(seq_len(9L))]
+    observed <- vapply(
+      strsplit(fields[[index]][-(seq_len(9L))], ":", fixed = TRUE),
+      `[[`,
+      character(1L),
+      1L
+    )
     expected <- as.character((seq_along(samples) + index) %% 2L)
-    expect_identical(observed, expected, info = paste("position", positions[[index]]))
+    expect_identical(
+      observed,
+      expected,
+      info = paste("position", positions[[index]])
+    )
   }
 })

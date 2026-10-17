@@ -5,6 +5,17 @@
 #' surrounding whitespace are rejected because the native reader treats them
 #' as part of a path.
 #'
+#' Overlapping exact allele records orient each diploid sample independently.
+#' Each chunk supplies one local phase set per sample; input PS annotations
+#' are rejected. Adjacent chunks on one contig must start at increasing record
+#' positions and share identical ordered allele records.
+#' `FORMAT/PS` identifies the resulting phase set; absent or tied informative
+#' overlap starts a separate set for that sample. Haploid, missing and unphased
+#' genotypes have no PS. `FORMAT/LIGATE_FLIP` records an applied allele-pair
+#' swap, and `INFO/LIGATE_CHUNK` is the one-based selected input-list entry.
+#' GP, DS, biological annotations and original HS/HSC draw scopes are retained.
+#' Ligation does not join independently sampled chunks into a joint draw.
+#'
 #' @param input_list Absolute text-file path containing ordered chunk paths.
 #' @param output_bcf Absolute output `.bcf`, `.vcf`, or `.vcf.gz` path.
 #' @param executable Absolute `GLIMPSE2_ligate` path.
@@ -36,9 +47,17 @@ rglimpse2_ligate <- function(
         )
       }
       seed <- .rgl_assert_integer(seed, "seed", 0L, .Machine$integer.max)
-      threads <- .rgl_assert_integer(threads, "threads", 1L, .Machine$integer.max)
+      threads <- .rgl_assert_integer(
+        threads,
+        "threads",
+        1L,
+        .Machine$integer.max
+      )
 
-      outputs <- c(list(output_bcf = output_bcf), if (length(log)) list(log = log))
+      outputs <- c(
+        list(output_bcf = output_bcf),
+        if (length(log)) list(log = log)
+      )
       ready <- .rgl_preflight(
         "ligate",
         executable,
@@ -57,8 +76,11 @@ rglimpse2_ligate <- function(
       ]
       missing <- chunks[!file.exists(chunks) | dir.exists(chunks)]
       if (
-        !length(chunks) || length(malformed) || length(invalid) ||
-          length(missing) || anyDuplicated(chunks)
+        !length(chunks) ||
+          length(malformed) ||
+          length(invalid) ||
+          length(missing) ||
+          anyDuplicated(chunks)
       ) {
         return(rglimpse2_error_value(
           message = paste(
@@ -78,10 +100,14 @@ rglimpse2_ligate <- function(
       }
 
       arguments <- c(
-        "--input", input_list,
-        "--output", output_bcf,
-        "--seed", as.character(seed),
-        "--threads", as.character(threads),
+        "--input",
+        input_list,
+        "--output",
+        output_bcf,
+        "--seed",
+        as.character(seed),
+        "--threads",
+        as.character(threads),
         .rgl_optional_cli("--log", log)
       )
       .rgl_run_process("ligate", executable, arguments, outputs)

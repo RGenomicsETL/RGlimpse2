@@ -9,11 +9,19 @@ local({
   root <- tempfile("rglimpse2-ligate-samples-")
   dir.create(root)
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
-  write_chunk <- function(path, positions, reversed, nmain = 15L, samples = TRUE) {
+  write_chunk <- function(
+    path,
+    positions,
+    reversed,
+    nmain = 15L,
+    samples = TRUE
+  ) {
     writer <- vcfppR::vcfwriter$new(path, "VCFv4.2")
     writer$addContig("1")
     # Distinct input header dictionaries exercise records unique to reader 1.
-    if (reversed) writer$addINFO("EXTRA", "1", "Integer", "Unused header entry")
+    if (reversed) {
+      writer$addINFO("EXTRA", "1", "Integer", "Unused header entry")
+    }
     writer$addFORMAT("GT", "1", "String", "GT")
     if (samples) {
       writer$addLine(paste0("##NMAIN=", nmain))
@@ -27,7 +35,13 @@ local({
       gt <- if (reversed) "1|0" else "0|1"
       hs <- if (reversed) "357913941" else "715827882"
       writer$writeline(paste(
-        "1", position, ".", "A", "C", ".", "PASS",
+        "1",
+        position,
+        ".",
+        "A",
+        "C",
+        ".",
+        "PASS",
         if (samples) paste0("HSC=", scope) else ".",
         if (samples) "GT:HS" else "GT",
         if (samples) paste(gt, hs, sep = ":") else gt,
@@ -43,7 +57,9 @@ local({
   connection <- Rduckhts::rduckhts_connect()
   on.exit(DBI::dbDisconnect(connection, shutdown = TRUE), add = TRUE)
   for (chunk in chunks) {
-    expect_true(Rduckhts::rduckhts_bcf_index(connection, chunk, threads = 1L)$success)
+    expect_true(
+      Rduckhts::rduckhts_bcf_index(connection, chunk, threads = 1L)$success
+    )
   }
   input_list <- file.path(root, "input.txt")
   writeLines(chunks, input_list)
@@ -57,8 +73,19 @@ local({
   while (reader$variant()) {
     record <- strsplit(reader$line(), "\t", fixed = TRUE)[[1L]]
     positions <- c(positions, as.integer(record[2L]))
-    scopes <- c(scopes, record[8L])
-    expect_identical(record[10:11], c("0|1:715827882", "1:357913941"))
+    info_fields <- strsplit(record[8L], ";", fixed = TRUE)[[1L]]
+    scopes <- c(scopes, info_fields[startsWith(info_fields, "HSC=")])
+    genotype_fields <- strsplit(record[9L], ":", fixed = TRUE)[[1L]]
+    observed <- strsplit(record[10L], ":", fixed = TRUE)[[1L]]
+    expect_identical(
+      observed[match(c("GT", "HS"), genotype_fields)],
+      c("0|1", "715827882")
+    )
+    observed_haploid <- strsplit(record[11L], ":", fixed = TRUE)[[1L]]
+    expect_identical(
+      observed_haploid[match(c("GT", "HS"), genotype_fields)],
+      c("1", "357913941")
+    )
   }
   expect_identical(positions, seq(100L, 900L, 50L))
   expect_identical(scopes[positions == 450L], "HSC=1:400-900:400-900")
@@ -67,20 +94,40 @@ local({
 
   for (kind in c("different-main", "absent-samples")) {
     incompatible <- file.path(root, paste0(kind, ".bcf"))
-    write_chunk(incompatible, seq(400L, 900L, 50L), TRUE,
-      nmain = 1L, samples = kind != "absent-samples"
+    write_chunk(
+      incompatible,
+      seq(400L, 900L, 50L),
+      TRUE,
+      nmain = 1L,
+      samples = kind != "absent-samples"
     )
-    expect_true(Rduckhts::rduckhts_bcf_index(connection, incompatible, threads = 1L)$success)
+    expect_true(
+      Rduckhts::rduckhts_bcf_index(
+        connection,
+        incompatible,
+        threads = 1L
+      )$success
+    )
     writeLines(c(chunks[1L], incompatible), input_list)
-    rejected <- rglimpse2_ligate(input_list, file.path(root, paste0(kind, "-out.bcf")), executable, seed = 712L)
+    rejected <- rglimpse2_ligate(
+      input_list,
+      file.path(root, paste0(kind, "-out.bcf")),
+      executable,
+      seed = 712L
+    )
     expect_true(rglimpse2_is_error(rejected))
     expected_message <- if (kind == "different-main") {
       "Cannot ligate HS chunks with different NMAIN draw counts"
     } else {
       "Cannot ligate chunks with and without HS samples"
     }
-    expect_true(grepl(expected_message,
-      paste(c(rejected@details$stdout, rejected@details$stderr), collapse = "\n"), fixed = TRUE
+    expect_true(grepl(
+      expected_message,
+      paste(
+        c(rejected@details$stdout, rejected@details$stderr),
+        collapse = "\n"
+      ),
+      fixed = TRUE
     ))
   }
 })
