@@ -1,3 +1,12 @@
+# RGlimpse2 (development version)
+
+- `rglimpse2_phase()`, `rglimpse2_phase_bam()` and `rglimpse2_phase_bams()`
+  accept `haplotype_samples = TRUE` to export actual native main-iteration
+  allele samples as packed FORMAT/HS. INFO/HSC retains the chunk-local draw
+  scope through ligation; GT phase swaps also reorient all retained draws.
+  These are rephased allele samples, not reference-copying paths or soft
+  per-haplotype probabilities. Export leaves existing GT/DS/GP and RNG unchanged.
+
 # RGlimpse2 0.0.0.9007
 
 - Normalize direct-BAM likelihoods to the best genotype with nearest-integer

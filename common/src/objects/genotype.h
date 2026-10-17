@@ -93,6 +93,9 @@ public:
 
 	// Sparse storage for GPs and HSs
 	std::vector < inferred_genotype > stored_data;
+	// Opt-in dense main-iteration samples: two allele bits per iteration.
+	// Separate from sparse GPs: even an elided Ref/Ref GP may have a sampled ALT.
+	std::vector < uint32_t > sampled_haplotypes;
 
 	// This should be removed as it is already stored in haplotype_set
 	std::vector < bool > H0;					// First haplotype
@@ -113,6 +116,7 @@ public:
 	void storeGenotypePosteriorsAndHaplotypes(const std::vector < float > &);
 	void storeGenotypePosteriorsAndHaplotypes(const std::vector < float > &, const std::vector < float > &);
 	void sortAndNormAndInferGenotype();
+	void storeHaplotypeSample();
 
 	template<class Archive>
 	void serialize_checkpoint_data(Archive &ar)

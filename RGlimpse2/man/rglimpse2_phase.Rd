@@ -22,7 +22,8 @@ rglimpse2_phase(
   k_pbwt = 2000L,
   impute_reference_only_variants = FALSE,
   use_gl_indels = FALSE,
-  log = character()
+  log = character(),
+  haplotype_samples = FALSE
 )
 }
 \arguments{
@@ -61,6 +62,9 @@ target likelihood records from the reference.}
 than use the default flat-likelihood scaffold behavior.}
 
 \item{log}{Empty or one absolute log output path.}
+
+\item{haplotype_samples}{Export actual rephased main-iteration allele draws
+as packed \code{FORMAT/HS}, with chunk-local \code{INFO/HSC} scope. See Details.}
 }
 \value{
 \code{RGlimpse2RunResult} or an \code{RGlimpse2ErrorValue}.
@@ -69,4 +73,15 @@ than use the default flat-likelihood scaffold behavior.}
 Invokes \code{GLIMPSE2_phase} once against a binary reference chunk. RGlimpse2
 currently requires one internal phase thread so a fixed seed is not coupled
 to worker scheduling; parallelism belongs across independent chunks.
+}
+\details{
+With \code{haplotype_samples = TRUE}, bits \code{2*d} and \code{2*d+1} of \code{HS}
+contain the first and second sampled alleles for zero-based main iteration
+\code{d}; haploid second bits are zero. \code{NMAIN} declares the draw count. Samples
+are retained after GLIMPSE2's linked rephasing of alleles sampled from
+per-site imputation marginals. They are not reference-copying paths or soft
+haplotype probabilities. Iteration indices are local to one chunk; do not
+concatenate them across \code{HSC} scopes into a global phase draw. Ligation
+preserves scope and reorients both alleles in each draw when it swaps GT.
+Export does not consume random numbers or change GT, DS, or GP.
 }

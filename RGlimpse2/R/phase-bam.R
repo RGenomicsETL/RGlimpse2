@@ -38,6 +38,8 @@
 #' @param keep_duplicates Whether to keep reads marked as duplicates.
 #' @param burnin Number of burn-in iterations.
 #' @param main Number of main iterations, at most 15.
+#' @param haplotype_samples Export actual chunk-local main-iteration allele
+#'   draws as `FORMAT/HS`. See [rglimpse2_phase()] for encoding and scope.
 #' @param ne Positive effective diploid population size.
 #' @param pbwt_depth Positive PBWT neighbour depth.
 #' @param pbwt_modulo_cm Positive PBWT selection spacing in cM.
@@ -72,7 +74,8 @@ rglimpse2_phase_bam <- function(
   pbwt_modulo_cm = 0.1,
   k_init = 1000L,
   k_pbwt = 2000L,
-  log = character()
+  log = character(),
+  haplotype_samples = FALSE
 ) {
   .rgl_contract_call(
     code = "invalid_phase_bam_request",
@@ -167,6 +170,7 @@ rglimpse2_phase_bam <- function(
       keep_duplicates <- .rgl_assert_flag(keep_duplicates, "keep_duplicates")
       burnin <- .rgl_assert_integer(burnin, "burnin", 0L, .Machine$integer.max)
       main <- .rgl_assert_integer(main, "main", 1L, 15L)
+      haplotype_samples <- .rgl_assert_flag(haplotype_samples, "haplotype_samples")
       ne <- .rgl_assert_integer(ne, "ne", 1L, .Machine$integer.max)
       pbwt_depth <- .rgl_assert_integer(
         pbwt_depth,
@@ -220,6 +224,7 @@ rglimpse2_phase_bam <- function(
         "--threads", "1",
         "--burnin", as.character(burnin),
         "--main", as.character(main),
+        if (haplotype_samples) "--haplotype-samples",
         "--ne", as.character(ne),
         "--pbwt-depth", as.character(pbwt_depth),
         "--pbwt-modulo-cm", .rgl_cli_number(pbwt_modulo_cm),
