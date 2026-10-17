@@ -269,6 +269,103 @@ local({
   expect_identical(orientations$FORMAT_GT, c("0|1", "0|1"))
   expect_identical(orientations$FORMAT_LIGATE_FLIP, c(1L, 0L))
 
+  adjacent <- file.path(
+    root,
+    c("adjacent-left.bcf", "adjacent-middle.bcf", "adjacent-right.bcf")
+  )
+  write_chunk(
+    adjacent[1L],
+    vapply(c(100L, 200L, 250L, 300L), record, character(1L), maternal = "0|1")
+  )
+  write_chunk(
+    adjacent[2L],
+    vapply(
+      c(200L, 250L, 300L, 400L, 500L),
+      record,
+      character(1L),
+      maternal = "1|0",
+      scope = "middle"
+    )
+  )
+  write_chunk(
+    adjacent[3L],
+    vapply(
+      c(400L, 500L, 600L),
+      record,
+      character(1L),
+      maternal = "0|1",
+      scope = "right"
+    )
+  )
+  writeLines(adjacent, input_list)
+  adjacent_output <- file.path(root, "adjacent-joined.bcf")
+  expect_true(S7::S7_inherits(
+    rglimpse2_ligate(input_list, adjacent_output, executable, seed = 37L),
+    RGlimpse2RunResult
+  ))
+  Rduckhts::rduckhts_bcf(
+    connection,
+    "adjacent",
+    adjacent_output,
+    tidy_format = TRUE
+  )
+  adjacent_maternal <- DBI::dbGetQuery(
+    connection,
+    "SELECT * FROM adjacent WHERE SAMPLE_ID = 'maternal' ORDER BY POS"
+  )
+  expect_equal(
+    adjacent_maternal$POS,
+    c(100L, 200L, 250L, 300L, 400L, 500L, 600L)
+  )
+  expect_identical(
+    adjacent_maternal$INFO_LIGATE_CHUNK,
+    c(1L, 1L, 2L, 2L, 2L, 3L, 3L)
+  )
+  expect_identical(
+    adjacent_maternal$INFO_ORIGIN,
+    c("left", "left", "middle", "middle", "middle", "right", "right")
+  )
+  expect_identical(
+    adjacent_maternal$FORMAT_LIGATE_FLIP,
+    c(0L, 0L, 1L, 1L, 1L, 0L, 0L)
+  )
+  expect_identical(adjacent_maternal$FORMAT_GT, rep("0|1", 7L))
+  expect_identical(adjacent_maternal$FORMAT_PS, rep(100L, 7L))
+  expect_identical(
+    DBI::dbGetQuery(
+      connection,
+      "SELECT FORMAT_LIGATE_FLIP FROM adjacent WHERE SAMPLE_ID = 'fetal' ORDER BY POS"
+    )$FORMAT_LIGATE_FLIP,
+    rep(0L, 7L)
+  )
+
+  nested <- file.path(root, c("nested-left.bcf", "nested-right.bcf"))
+  write_chunk(
+    nested[1L],
+    vapply(c(100L, 200L, 300L), record, character(1L), maternal = "0|1")
+  )
+  write_chunk(
+    nested[2L],
+    vapply(c(200L, 250L), record, character(1L), maternal = "1|0")
+  )
+  writeLines(nested, input_list)
+  nested_result <- rglimpse2_ligate(
+    input_list,
+    file.path(root, "nested-joined.bcf"),
+    executable,
+    seed = 37L
+  )
+  expect_true(rglimpse2_is_error(nested_result))
+  expect_identical(nested_result@code, "ligate_failed")
+  expect_true(grepl(
+    "nested chunk extents are unsupported",
+    paste(
+      c(nested_result@details$stdout, nested_result@details$stderr),
+      collapse = "\n"
+    ),
+    fixed = TRUE
+  ))
+
   gap <- file.path(root, "gap.bcf")
   write_chunk(gap, c(record(700L, "1|0"), record(800L, "1|0")))
   writeLines(c(chunks[1L], gap), input_list)

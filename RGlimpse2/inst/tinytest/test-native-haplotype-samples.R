@@ -28,10 +28,18 @@ local({
   read_output <- function(path) {
     reader <- vcfppR::vcfreader$new(path)
     records <- character()
-    while (reader$variant()) records <- c(records, reader$line())
+    while (reader$variant()) {
+      records <- c(records, reader$line())
+    }
     list(header = paste(reader$header(), collapse = "\n"), records = records)
   }
-  phase <- function(path, main, ploidy, enabled, executable = executables@phase) {
+  phase <- function(
+    path,
+    main,
+    ploidy,
+    enabled,
+    executable = executables@phase
+  ) {
     rglimpse2_phase(
       input_gl = file.path(data, case$target),
       reference_bin = reference@outputs$reference_bin,
@@ -55,11 +63,21 @@ local({
     for (main in c(1L, 15L)) {
       output <- tempfile(tmpdir = root, fileext = ".bcf")
       ordinary <- tempfile(tmpdir = root, fileext = ".bcf")
-      expect_true(S7::S7_inherits(phase(output, main, ploidy, TRUE), RGlimpse2RunResult))
-      expect_true(S7::S7_inherits(phase(ordinary, main, ploidy, FALSE), RGlimpse2RunResult))
+      expect_true(S7::S7_inherits(
+        phase(output, main, ploidy, TRUE),
+        RGlimpse2RunResult
+      ))
+      expect_true(S7::S7_inherits(
+        phase(ordinary, main, ploidy, FALSE),
+        RGlimpse2RunResult
+      ))
       sampled <- read_output(output)
       baseline <- read_output(ordinary)
-      expect_true(grepl("##FORMAT=<ID=HS,Number=1,Type=Integer", sampled$header, fixed = TRUE))
+      expect_true(grepl(
+        "##FORMAT=<ID=HS,Number=1,Type=Integer",
+        sampled$header,
+        fixed = TRUE
+      ))
       expect_true(grepl(paste0("##NMAIN=", main), sampled$header, fixed = TRUE))
       expect_false(grepl("##FORMAT=<ID=HS", baseline$header, fixed = TRUE))
       expect_identical(length(sampled$records), length(baseline$records))
@@ -76,23 +94,43 @@ local({
         scopes[site] <- sub(".*HSC=([^;]+).*", "\\1", fields[8L])
         for (sample in 1:2) {
           values <- strsplit(fields[9L + sample], ":", fixed = TRUE)[[1L]]
-          expect_identical(paste(values[1:3], collapse = ":"), expected[9L + sample])
+          expect_true(grepl("^[01](\\|[01])?$", values[1L]))
+          expect_identical(
+            paste(values[1:3], collapse = ":"),
+            expected[9L + sample]
+          )
           packed[site, sample] <- as.integer(values[4L])
         }
       }
       expect_true(all(packed >= 0L & packed < 4^main))
       expect_identical(length(unique(scopes)), 1L)
-      expect_true(grepl(paste0(case$input_region, ":"), scopes[1L], fixed = TRUE))
+      expect_true(grepl(
+        paste0(case$input_region, ":"),
+        scopes[1L],
+        fixed = TRUE
+      ))
       # Consumer-facing list of actual 0/1 alleles on one ordered site axis.
       draws <- lapply(seq_len(main), function(draw) {
         state <- packed[, 1L] %/% 4^(draw - 1L) %% 4
-        data.frame(position = positions, haplotype_1 = state %% 2, haplotype_2 = state %/% 2)
+        data.frame(
+          position = positions,
+          haplotype_1 = state %% 2,
+          haplotype_2 = state %/% 2
+        )
       })
       expect_identical(length(draws), main)
-      expect_true(all(vapply(draws, function(draw) identical(draw$position, positions), logical(1L))))
+      expect_true(all(vapply(
+        draws,
+        function(draw) identical(draw$position, positions),
+        logical(1L)
+      )))
       expect_true(all(unlist(lapply(draws, function(draw) draw[-1L])) %in% 0:1))
       if (length(ploidy) > 0L) {
-        expect_true(all(vapply(draws, function(draw) all(draw$haplotype_2 == 0), logical(1L))))
+        expect_true(all(vapply(
+          draws,
+          function(draw) all(draw$haplotype_2 == 0),
+          logical(1L)
+        )))
       }
       if (identical(ploidy, haploid)) {
         expect_true(all(bitwAnd(packed[, 2L], 715827882L) == 0L))
@@ -100,10 +138,43 @@ local({
       input_list <- tempfile(tmpdir = root)
       writeLines(output, input_list)
       ligated <- tempfile(tmpdir = root, fileext = ".bcf")
-      expect_true(S7::S7_inherits(rglimpse2_ligate(
-        input_list, ligated, executables@ligate, seed = 703L
-      ), RGlimpse2RunResult))
-      expect_identical(read_output(ligated)$records, sampled$records)
+      expect_true(S7::S7_inherits(
+        rglimpse2_ligate(
+          input_list,
+          ligated,
+          executables@ligate,
+          seed = 703L
+        ),
+        RGlimpse2RunResult
+      ))
+      expected_ligated <- vapply(
+        sampled$records,
+        function(record) {
+          fields <- strsplit(record, "\t", fixed = TRUE)[[1L]]
+          fields[8L] <- paste0(fields[8L], ";LIGATE_CHUNK=1")
+          fields[9L] <- paste0(fields[9L], ":PS:LIGATE_FLIP")
+          for (sample in 1:2) {
+            genotype <- strsplit(fields[9L + sample], ":", fixed = TRUE)[[1L]][
+              1L
+            ]
+            phase_set <- if (grepl("|", genotype, fixed = TRUE)) {
+              as.character(positions[1L])
+            } else {
+              "."
+            }
+            fields[9L + sample] <- paste(
+              fields[9L + sample],
+              phase_set,
+              "0",
+              sep = ":"
+            )
+          }
+          paste(fields, collapse = "\t")
+        },
+        character(1L),
+        USE.NAMES = FALSE
+      )
+      expect_identical(read_output(ligated)$records, expected_ligated)
     }
   }
 
@@ -112,7 +183,13 @@ local({
   phase(scalar, 15L, character(), TRUE)
   for (backend in setdiff(rglimpse2_simd_info()@available_backends, "scalar")) {
     output <- tempfile(tmpdir = root, fileext = ".bcf")
-    result <- phase(output, 15L, character(), TRUE, rglimpse2_executables(phase_backend = backend)@phase)
+    result <- phase(
+      output,
+      15L,
+      character(),
+      TRUE,
+      rglimpse2_executables(phase_backend = backend)@phase
+    )
     expect_true(S7::S7_inherits(result, RGlimpse2RunResult))
     expect_identical(read_output(output)$records, read_output(scalar)$records)
   }
@@ -124,36 +201,108 @@ local({
   partial <- file.path(root, "partial.bcf")
   resumed <- file.path(root, "resumed.bcf")
   common <- c(
-    "--input-gl", file.path(data, case$target),
-    "--reference", reference@outputs$reference_bin,
-    "--seed", "702", "--threads", "1", "--burnin", "2",
-    "--pbwt-depth", "2", "--Kinit", "4", "--Kpbwt", "4"
+    "--input-gl",
+    file.path(data, case$target),
+    "--reference",
+    reference@outputs$reference_bin,
+    "--seed",
+    "702",
+    "--threads",
+    "1",
+    "--burnin",
+    "2",
+    "--pbwt-depth",
+    "2",
+    "--Kinit",
+    "4",
+    "--Kpbwt",
+    "4"
   )
   processx::run(executables@phase, c(common, "--main", "4", "--output", full))
-  processx::run(executables@phase, c(common, "--main", "3", "--output", partial, "--checkpoint-file-out", checkpoint))
-  processx::run(executables@phase, c(common, "--main", "4", "--output", resumed, "--checkpoint-file-in", checkpoint))
+  processx::run(
+    executables@phase,
+    c(
+      common,
+      "--main",
+      "3",
+      "--output",
+      partial,
+      "--checkpoint-file-out",
+      checkpoint
+    )
+  )
+  processx::run(
+    executables@phase,
+    c(
+      common,
+      "--main",
+      "4",
+      "--output",
+      resumed,
+      "--checkpoint-file-in",
+      checkpoint
+    )
+  )
   expect_identical(read_output(resumed)$records, read_output(full)$records)
 
   for (flag in c("--checkpoint-file-in", "--checkpoint-file-out")) {
-    rejected <- processx::run(executables@phase, c(
-      "--input-gl", "/absent/input.bcf", "--reference", "/absent/ref.bin",
-      "--output", file.path(root, "rejected.bcf"), "--haplotype-samples",
-      flag, file.path(root, "checkpoint.bin")
-    ), error_on_status = FALSE)
+    rejected <- processx::run(
+      executables@phase,
+      c(
+        "--input-gl",
+        "/absent/input.bcf",
+        "--reference",
+        "/absent/ref.bin",
+        "--output",
+        file.path(root, "rejected.bcf"),
+        "--haplotype-samples",
+        flag,
+        file.path(root, "checkpoint.bin")
+      ),
+      error_on_status = FALSE
+    )
     expect_true(rejected$status != 0L)
-    expect_true(grepl("does not support checkpoint", paste(rejected$stdout, rejected$stderr), fixed = TRUE))
+    expect_true(grepl(
+      "does not support checkpoint",
+      paste(rejected$stdout, rejected$stderr),
+      fixed = TRUE
+    ))
   }
   for (main in c(0L, 16L)) {
-    rejected <- processx::run(executables@phase, c(
-      "--input-gl", "/absent/input.bcf", "--reference", "/absent/ref.bin",
-      "--output", file.path(root, "rejected.bcf"), "--haplotype-samples", "--main", as.character(main)
-    ), error_on_status = FALSE)
+    rejected <- processx::run(
+      executables@phase,
+      c(
+        "--input-gl",
+        "/absent/input.bcf",
+        "--reference",
+        "/absent/ref.bin",
+        "--output",
+        file.path(root, "rejected.bcf"),
+        "--haplotype-samples",
+        "--main",
+        as.character(main)
+      ),
+      error_on_status = FALSE
+    )
     expect_true(rejected$status != 0L)
   }
-  rejected <- processx::run(executables@phase, c(
-    "--input-gl", "/absent/input.bcf", "--reference", "/absent/ref.bin",
-    "--output", file.path(root, "rejected.bgen"), "--haplotype-samples"
-  ), error_on_status = FALSE)
+  rejected <- processx::run(
+    executables@phase,
+    c(
+      "--input-gl",
+      "/absent/input.bcf",
+      "--reference",
+      "/absent/ref.bin",
+      "--output",
+      file.path(root, "rejected.bgen"),
+      "--haplotype-samples"
+    ),
+    error_on_status = FALSE
+  )
   expect_true(rejected$status != 0L)
-  expect_true(grepl("requires VCF/BCF", paste(rejected$stdout, rejected$stderr), fixed = TRUE))
+  expect_true(grepl(
+    "requires VCF/BCF",
+    paste(rejected$stdout, rejected$stderr),
+    fixed = TRUE
+  ))
 })

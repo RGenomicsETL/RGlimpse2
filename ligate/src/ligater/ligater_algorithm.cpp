@@ -470,6 +470,8 @@ void ligater::ligate() {
 				phase_set[0] = phase_set[1];
 				source_chunk[0] = source_chunk[1];
 			}
+			if (sr->nreaders == 2 && !bcf_sr_has_line(sr, 1) && bcf_sr_region_done(sr, 1))
+				vrb.error("The right chunk ended before the left chunk; nested chunk extents are unsupported");
 
             // Get a line to learn about current position
             for (i=0; i<sr->nreaders; i++) if ( bcf_sr_has_line(sr,i) ) break;
@@ -501,6 +503,7 @@ void ligater::ligate() {
                 continue;
             }
 			if (sr->nreaders == 2 && !overlap_scanned) {
+				n_sites_buff = 0;
 				scan_overlap(ifname, bcf_seqname(sr->readers[i].header, line), line->pos);
 				overlap_scanned = true;
 			}

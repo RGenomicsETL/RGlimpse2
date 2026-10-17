@@ -1,5 +1,5 @@
 diff --git a/ligate/src/ligater/ligater_algorithm.cpp b/ligate/src/ligater/ligater_algorithm.cpp
-index 2892779..0ed432e 100644
+index 2892779..dba0e02 100644
 --- a/ligate/src/ligater/ligater_algorithm.cpp
 +++ b/ligate/src/ligater/ligater_algorithm.cpp
 @@ -106,10 +106,10 @@ void ligater::phase_update(bcf_hdr_t *hdr, bcf1_t *line, const bool uphalf)
@@ -176,7 +176,7 @@ index 2892779..0ed432e 100644
              ifname++;
              if ( start_pos[ifname-1]==-1 ) break;   // new chromosome, start with only one file open
              if ( ifname < nfiles && start_pos[ifname]==-1 ) break; // next file starts on a different chromosome
-@@ -402,7 +463,13 @@ void ligater::ligate() {
+@@ -402,7 +463,15 @@ void ligater::ligate() {
          int nret;
          while ( (nret = bcf_sr_next_line(sr)) )
          {
@@ -188,10 +188,12 @@ index 2892779..0ed432e 100644
 +				phase_set[0] = phase_set[1];
 +				source_chunk[0] = source_chunk[1];
 +			}
++			if (sr->nreaders == 2 && !bcf_sr_has_line(sr, 1) && bcf_sr_region_done(sr, 1))
++				vrb.error("The right chunk ended before the left chunk; nested chunk extents are unsupported");
  
              // Get a line to learn about current position
              for (i=0; i<sr->nreaders; i++) if ( bcf_sr_has_line(sr,i) ) break;
-@@ -414,20 +481,29 @@ void ligater::ligate() {
+@@ -414,20 +483,30 @@ void ligater::ligate() {
  
              //  Check if the position overlaps with the next, yet unopened, reader
              int must_seek = 0;
@@ -217,13 +219,14 @@ index 2892779..0ed432e 100644
                  continue;
              }
 +			if (sr->nreaders == 2 && !overlap_scanned) {
++				n_sites_buff = 0;
 +				scan_overlap(ifname, bcf_seqname(sr->readers[i].header, line), line->pos);
 +				overlap_scanned = true;
 +			}
  
              if ( sr->nreaders>1 && ((!bcf_sr_has_line(sr,0) && !bcf_sr_region_done(sr,0)) || (!bcf_sr_has_line(sr,1) && !bcf_sr_region_done(sr,1))) )
              {
-@@ -457,20 +533,28 @@ void ligater::ligate() {
+@@ -457,20 +536,28 @@ void ligater::ligate() {
      				vrb.wait("Cnk " + stb.str(ifname-1) + " [" + prev_chr + ":" + stb.str(first_pos) + "-]");
              		//after a buffer we go back to one reader. Chunk 1 is now chunk 0.
      				n_sites_buff = 0;

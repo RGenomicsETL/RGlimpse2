@@ -156,21 +156,25 @@ that scope. Ligation preserves `HSC` and swaps both allele bits of every
 diploid draw when it swaps GT. It rejects HS chunks with different
 `NMAIN` counts or mixtures of chunks with and without samples. A
 consumer must retain scope and must not concatenate the same iteration
-index across independently sampled chunks into a global draw. The same
+index across independently sampled chunks into a global draw. HS
+ligation consumes GLIMPSE2 phase output, whose diploid GT is complete
+and phased. HS with missing or unphased diploid GT is outside this
+producer contract; haploid allele samples remain unchanged. The same
 ligater accepts ordinary diploid VCF/BCF chunks, including converted
 QUILT2 NIPT maternal/fetal samples and categorical multiallelic
 genotypes. Each input chunk supplies one local phase set per sample.
 Input PS annotations are rejected, and adjacent chunks on one contig
 must have strictly increasing first record positions and share identical
-ordered allele records. `FORMAT/PS` records per-sample phase sets:
-missing or tied informative overlap starts a separate set, while
-haploid, missing and unphased genotypes have no PS. `FORMAT/LIGATE_FLIP`
-records applied pair swaps and `INFO/LIGATE_CHUNK` selects the original
-ordered input chunk for each complete output record. Consumers use this
-source to retain matching posterior evidence; GP/DS and biological
-parent-origin probabilities keep their original allele semantics. The
-native export option requires VCF/BCF and rejects checkpoint
-input/output.
+ordered allele records. Nested chunk extents are unsupported and fail
+when the right chunk ends before the left chunk. `FORMAT/PS` records
+per-sample phase sets: missing or tied informative overlap starts a
+separate set, while haploid, missing and unphased genotypes have no PS.
+`FORMAT/LIGATE_FLIP` records applied pair swaps and `INFO/LIGATE_CHUNK`
+selects the original ordered input chunk for each complete output
+record. Consumers use this source to retain matching posterior evidence;
+GP/DS and biological parent-origin probabilities keep their original
+allele semantics. The native export option requires VCF/BCF and rejects
+checkpoint input/output.
 
 The split-reference, phase, and ligate wrappers follow the same
 contract. They do not search `PATH`, overwrite an output, build shell
