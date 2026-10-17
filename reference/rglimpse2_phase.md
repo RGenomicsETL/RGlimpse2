@@ -26,7 +26,8 @@ rglimpse2_phase(
   k_pbwt = 2000L,
   impute_reference_only_variants = FALSE,
   use_gl_indels = FALSE,
-  log = character()
+  log = character(),
+  haplotype_samples = FALSE
 )
 ```
 
@@ -102,6 +103,24 @@ rglimpse2_phase(
 
   Empty or one absolute log output path.
 
+- haplotype_samples:
+
+  Export actual rephased main-iteration allele draws as packed
+  `FORMAT/HS`, with chunk-local `INFO/HSC` scope. See Details.
+
 ## Value
 
 `RGlimpse2RunResult` or an `RGlimpse2ErrorValue`.
+
+## Details
+
+With `haplotype_samples = TRUE`, bits `2*d` and `2*d+1` of `HS` contain
+the first and second sampled alleles for zero-based main iteration `d`;
+haploid second bits are zero. `NMAIN` declares the draw count. Samples
+are retained after GLIMPSE2's linked rephasing of alleles sampled from
+per-site imputation marginals. They are not reference-copying paths or
+soft haplotype probabilities. Iteration indices are local to one chunk;
+do not concatenate them across `HSC` scopes into a global phase draw.
+Ligation preserves scope and reorients both alleles in each draw when it
+swaps GT. Export does not consume random numbers or change GT, DS, or
+GP.

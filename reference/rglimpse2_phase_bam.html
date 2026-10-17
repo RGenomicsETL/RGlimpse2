@@ -17,7 +17,7 @@ parallelize independent chunks."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9007</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9008</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,7 +85,8 @@ parallelize independent chunks.</p>
 <span>  pbwt_modulo_cm <span class="op">=</span> <span class="fl">0.1</span>,</span>
 <span>  k_init <span class="op">=</span> <span class="fl">1000L</span>,</span>
 <span>  k_pbwt <span class="op">=</span> <span class="fl">2000L</span>,</span>
-<span>  log <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  log <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  haplotype_samples <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -204,6 +205,11 @@ paired.</p></dd>
 
 <dt id="arg-log">log<a class="anchor" aria-label="anchor" href="#arg-log"></a></dt>
 <dd><p>Empty or one absolute log output path.</p></dd>
+
+
+<dt id="arg-haplotype-samples">haplotype_samples<a class="anchor" aria-label="anchor" href="#arg-haplotype-samples"></a></dt>
+<dd><p>Export actual chunk-local main-iteration allele
+draws as <code>FORMAT/HS</code>. See <code><a href="rglimpse2_phase.html">rglimpse2_phase()</a></code> for encoding and scope.</p></dd>
 
 </dl></div>
     <div class="section level2">

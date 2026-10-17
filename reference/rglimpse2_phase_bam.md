@@ -37,7 +37,8 @@ rglimpse2_phase_bam(
   pbwt_modulo_cm = 0.1,
   k_init = 1000L,
   k_pbwt = 2000L,
-  log = character()
+  log = character(),
+  haplotype_samples = FALSE
 )
 ```
 
@@ -155,6 +156,13 @@ rglimpse2_phase_bam(
 - log:
 
   Empty or one absolute log output path.
+
+- haplotype_samples:
+
+  Export actual chunk-local main-iteration allele draws as `FORMAT/HS`.
+  See
+  [`rglimpse2_phase()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_phase.md)
+  for encoding and scope.
 
 ## Value
 

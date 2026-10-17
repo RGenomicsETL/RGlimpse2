@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9007</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9008</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,11 @@
       <small>Source: <a href="https://github.com/RGenomicsETL/RGlimpse2/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="development version" id="rglimpse2-development-version">RGlimpse2 (development version)<a class="anchor" aria-label="anchor" href="#rglimpse2-development-version"></a></h2>
+<ul><li>
+<code><a href="../reference/rglimpse2_phase.html">rglimpse2_phase()</a></code>, <code><a href="../reference/rglimpse2_phase_bam.html">rglimpse2_phase_bam()</a></code> and <code><a href="../reference/rglimpse2_phase_bams.html">rglimpse2_phase_bams()</a></code> accept <code>haplotype_samples = TRUE</code> to export actual native main-iteration allele samples as packed FORMAT/HS. INFO/HSC retains the chunk-local draw scope through ligation; GT phase swaps also reorient all retained draws. These are rephased allele samples, not reference-copying paths or soft per-haplotype probabilities. Export leaves existing GT/DS/GP and RNG unchanged.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9007" id="rglimpse2-0009007">RGlimpse2 0.0.0.9007<a class="anchor" aria-label="anchor" href="#rglimpse2-0009007"></a></h2>
 <ul><li>Normalize direct-BAM likelihoods to the best genotype with nearest-integer PL rounding, preserve cached depth for split SNPs across non-observable alleles, downsample SNP reads without sorting discarded reads into the retained set, and count repeated haploid reads in likelihoods (upstream <a href="https://github.com/RGenomicsETL/RGlimpse2/issues/323" class="external-link">#323</a>).</li>

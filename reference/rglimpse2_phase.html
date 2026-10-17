@@ -11,7 +11,7 @@ to worker scheduling; parallelism belongs across independent chunks."></head><bo
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9007</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9008</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,7 +67,8 @@ to worker scheduling; parallelism belongs across independent chunks.</p>
 <span>  k_pbwt <span class="op">=</span> <span class="fl">2000L</span>,</span>
 <span>  impute_reference_only_variants <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  use_gl_indels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  log <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  log <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  haplotype_samples <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -144,10 +145,27 @@ than use the default flat-likelihood scaffold behavior.</p></dd>
 <dt id="arg-log">log<a class="anchor" aria-label="anchor" href="#arg-log"></a></dt>
 <dd><p>Empty or one absolute log output path.</p></dd>
 
+
+<dt id="arg-haplotype-samples">haplotype_samples<a class="anchor" aria-label="anchor" href="#arg-haplotype-samples"></a></dt>
+<dd><p>Export actual rephased main-iteration allele draws
+as packed <code>FORMAT/HS</code>, with chunk-local <code>INFO/HSC</code> scope. See Details.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>RGlimpse2RunResult</code> or an <code>RGlimpse2ErrorValue</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>With <code>haplotype_samples = TRUE</code>, bits <code>2*d</code> and <code>2*d+1</code> of <code>HS</code>
+contain the first and second sampled alleles for zero-based main iteration
+<code>d</code>; haploid second bits are zero. <code>NMAIN</code> declares the draw count. Samples
+are retained after GLIMPSE2's linked rephasing of alleles sampled from
+per-site imputation marginals. They are not reference-copying paths or soft
+haplotype probabilities. Iteration indices are local to one chunk; do not
+concatenate them across <code>HSC</code> scopes into a global phase draw. Ligation
+preserves scope and reorients both alleles in each draw when it swaps GT.
+Export does not consume random numbers or change GT, DS, or GP.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

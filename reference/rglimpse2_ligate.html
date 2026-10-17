@@ -13,7 +13,7 @@ as part of a path."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">RGlimpse2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9007</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9008</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,6 +93,22 @@ as part of a path.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>RGlimpse2RunResult</code> or an <code>RGlimpse2ErrorValue</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Overlapping exact allele records orient each diploid sample independently.
+Each chunk supplies one local phase set per sample; input PS annotations
+are rejected. Adjacent chunks on one contig must start at increasing record
+positions and share identical ordered allele records.
+Nested extents fail when the right chunk ends before the left chunk.
+<code>FORMAT/PS</code> identifies the resulting phase set; absent or tied informative
+overlap starts a separate set for that sample. Haploid, missing and unphased
+genotypes have no PS. <code>FORMAT/LIGATE_FLIP</code> records an applied allele-pair
+swap, and <code>INFO/LIGATE_CHUNK</code> is the one-based selected input-list entry.
+GP, DS, biological annotations and original HS/HSC draw scopes are retained.
+HS inputs are GLIMPSE2 phase outputs with complete phased diploid GT;
+missing or unphased diploid GT with HS is outside that producer contract.
+Ligation does not join independently sampled chunks into a joint draw.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
