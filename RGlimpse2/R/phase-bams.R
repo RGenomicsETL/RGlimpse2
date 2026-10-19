@@ -29,6 +29,15 @@
 #' @param mapq Minimum read mapping quality.
 #' @param baseq Minimum base quality.
 #' @param max_depth Maximum reads retained at one site before downsampling.
+#' @param read_fraction Retention probability for read-name templates before pileup,
+#'   in `[0, 1]`. Zero keeps none; one preserves all reads. Uses samtools view's
+#'   HTSlib X31/Wang hash and low-24-bit threshold. Mates with the same name
+#'   share the decision; fractions are nested for a fixed seed. Existing read
+#'   filters and the per-site `max_depth` cap still apply.
+#' @param read_fraction_seed Integer in `[0, 2147483647]`, default `0`,
+#'   independent of `seed`. Matches `samtools view --subsample-seed` on the
+#'   same C runtime: nonzero seeds are expanded by `srand()`/`rand()`. Use zero
+#'   for identical read selection across C runtimes.
 #' @param call_indels Whether to compute genotype likelihoods at reference
 #'   indels. The default leaves indel likelihoods flat while retaining the
 #'   reference haplotype scaffold.
@@ -75,7 +84,9 @@ rglimpse2_phase_bams <- function(
   k_init = 1000L,
   k_pbwt = 2000L,
   log = character(),
-  haplotype_samples = FALSE
+  haplotype_samples = FALSE,
+  read_fraction = 1,
+  read_fraction_seed = 0L
 ) {
   .rgl_contract_call(
     code = "invalid_phase_bams_request",
@@ -235,6 +246,13 @@ rglimpse2_phase_bams <- function(
         1L,
         .Machine$integer.max
       )
+      read_fraction <- .rgl_assert_number(read_fraction, "read_fraction", 0, 1)
+      read_fraction_seed <- .rgl_assert_integer(
+        read_fraction_seed,
+        "read_fraction_seed",
+        0L,
+        .Machine$integer.max
+      )
       call_indels <- .rgl_assert_flag(call_indels, "call_indels")
       keep_orphan_reads <- .rgl_assert_flag(
         keep_orphan_reads,
@@ -252,7 +270,10 @@ rglimpse2_phase_bams <- function(
       keep_duplicates <- .rgl_assert_flag(keep_duplicates, "keep_duplicates")
       burnin <- .rgl_assert_integer(burnin, "burnin", 0L, .Machine$integer.max)
       main <- .rgl_assert_integer(main, "main", 1L, 15L)
-      haplotype_samples <- .rgl_assert_flag(haplotype_samples, "haplotype_samples")
+      haplotype_samples <- .rgl_assert_flag(
+        haplotype_samples,
+        "haplotype_samples"
+      )
       ne <- .rgl_assert_integer(ne, "ne", 1L, .Machine$integer.max)
       pbwt_depth <- .rgl_assert_integer(
         pbwt_depth,
@@ -289,7 +310,9 @@ rglimpse2_phase_bams <- function(
         inputs = inputs,
         outputs = outputs
       )
-      if (rglimpse2_is_error(ready)) return(ready)
+      if (rglimpse2_is_error(ready)) {
+        return(ready)
+      }
 
       bam_list <- tempfile("rglimpse2-bam-list-", fileext = ".txt")
       samples_file <- tempfile("rglimpse2-samples-", fileext = ".txt")
@@ -318,23 +341,43 @@ rglimpse2_phase_bams <- function(
       )
 
       arguments <- c(
-        "--bam-list", bam_list,
-        "--samples-file", samples_file,
-        "--reference", reference_bin,
-        "--output", staged_bcf,
-        "--seed", as.character(seed),
-        "--threads", "1",
-        "--burnin", as.character(burnin),
-        "--main", as.character(main),
+        "--bam-list",
+        bam_list,
+        "--samples-file",
+        samples_file,
+        "--reference",
+        reference_bin,
+        "--output",
+        staged_bcf,
+        "--seed",
+        as.character(seed),
+        "--threads",
+        "1",
+        "--burnin",
+        as.character(burnin),
+        "--main",
+        as.character(main),
         if (haplotype_samples) "--haplotype-samples",
-        "--ne", as.character(ne),
-        "--pbwt-depth", as.character(pbwt_depth),
-        "--pbwt-modulo-cm", .rgl_cli_number(pbwt_modulo_cm),
-        "--Kinit", as.character(k_init),
-        "--Kpbwt", as.character(k_pbwt),
-        "--mapq", as.character(mapq),
-        "--baseq", as.character(baseq),
-        "--max-depth", as.character(max_depth),
+        "--ne",
+        as.character(ne),
+        "--pbwt-depth",
+        as.character(pbwt_depth),
+        "--pbwt-modulo-cm",
+        .rgl_cli_number(pbwt_modulo_cm),
+        "--Kinit",
+        as.character(k_init),
+        "--Kpbwt",
+        as.character(k_pbwt),
+        "--mapq",
+        as.character(mapq),
+        "--baseq",
+        as.character(baseq),
+        "--max-depth",
+        as.character(max_depth),
+        "--read-fraction",
+        sprintf("%.17g", read_fraction),
+        "--read-fraction-seed",
+        as.character(read_fraction_seed),
         .rgl_optional_cli("--fasta", reference_fasta),
         if (call_indels) "--call-indels",
         if (keep_orphan_reads) "--keep-orphan-reads",
@@ -354,7 +397,9 @@ rglimpse2_phase_bams <- function(
         arguments,
         staged_outputs
       )
-      if (rglimpse2_is_error(run)) return(run)
+      if (rglimpse2_is_error(run)) {
+        return(run)
+      }
 
       # Publish the index first so the final BCF path is never visible without
       # its sidecar. If the BCF path loses a race, release the index claim.

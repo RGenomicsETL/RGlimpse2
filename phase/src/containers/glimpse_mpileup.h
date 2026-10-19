@@ -56,6 +56,8 @@ struct aux_t {     			// auxiliary data structure
 	hts_idx_t *idx;
 	bam_hdr_t * hdr;			// the file header
 	hts_itr_t * iter;			// NULL if a region not specified
+	double read_fraction;
+	uint32_t read_fraction_seed;
 	int min_mapQ;				// mapQ threshold for filter
 	//ref_t *ref;
 	//faidx_t* fai;
@@ -151,6 +153,8 @@ public:
 	int min_mq;
 	int min_bq;
 	int max_dp;
+	double read_fraction;
+	uint32_t read_fraction_seed;
 };
 
 #endif /* SRC_CONTAINERS_GLIMPSE_MPILEUP_H_ */

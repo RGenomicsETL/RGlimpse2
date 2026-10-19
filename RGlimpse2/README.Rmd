@@ -151,6 +151,20 @@ CRAM input additionally requires an explicit reference FASTA and its adjacent
 symbolic and other non-observable reference alleles remain in the haplotype
 scaffold with flat read likelihoods.
 
+Set `read_fraction = 0.25` and `read_fraction_seed = 0L` in either BAM/CRAM
+wrapper to deterministically subsample read-name templates at a 0.25 rate
+before pileup, without writing subsampled alignments. Realized depth varies
+with the available templates. The native options are
+`--read-fraction` and `--read-fraction-seed`. Selection uses the samtools
+HTSlib X31/Wang hash and low-24-bit threshold; mates sharing a name receive
+the same decision, and fractions with the same seed are nested. Existing
+mapping/base-quality filters and `max_depth` still apply. One retains every
+read without consuming random draws; zero retains none. The subsampling
+seed is independent of the imputation `seed`. Nonzero seeds use samtools\'
+`srand()`/`rand()` expansion on the same C runtime; seed zero gives
+cross-runtime read selection. The read fraction applies to every row in a
+multi-alignment call.
+
 Set `haplotype_samples = TRUE` in any phase wrapper to retain and export the
 actual allele samples after rephasing in each main iteration. `FORMAT/HS` packs
 two allele bits per draw: bits `2*d` and `2*d+1` are the first and second

@@ -13,6 +13,8 @@ phase/src/caller/caller_initialise.cpp
 phase/src/caller/caller_parameters.cpp
 phase/src/containers/conditioning_set.cpp
 phase/src/containers/conditioning_set.h
+phase/src/containers/glimpse_mpileup.cpp
+phase/src/containers/glimpse_mpileup.h
 phase/src/containers/haplotype_set.cpp
 phase/src/containers/haplotype_set.h
 phase/src/io/genotype_bam_caller.cpp

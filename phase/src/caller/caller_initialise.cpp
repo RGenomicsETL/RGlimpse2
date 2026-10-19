@@ -292,6 +292,13 @@ void caller::setup_mpileup()
 	M.min_mq = options["mapq"].as <int> ();
 	M.min_bq = options["baseq"].as<int>();
 	M.max_dp = options["max-depth"].as<int>();
+	M.read_fraction = options["read-fraction"].as<double>();
+	M.read_fraction_seed = options["read-fraction-seed"].as<int>();
+	if (M.read_fraction < 1.0 && M.read_fraction_seed != 0)
+	{
+		std::srand(M.read_fraction_seed);
+		M.read_fraction_seed = std::rand();
+	}
 
 	if (M.min_mq <0) vrb.error("Error setting min map quality. Value is negative: " + std::to_string(M.min_mq) + ".");
 	if (M.min_bq <0) vrb.error("Error setting min base quality. Value is negative: " + std::to_string(M.min_bq) + ".");
