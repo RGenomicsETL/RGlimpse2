@@ -29,7 +29,9 @@ rglimpse2_phase_bams(
   k_init = 1000L,
   k_pbwt = 2000L,
   log = character(),
-  haplotype_samples = FALSE
+  haplotype_samples = FALSE,
+  read_fraction = 1,
+  read_fraction_seed = 0L
 )
 }
 \arguments{
@@ -91,6 +93,17 @@ paired.}
 
 \item{haplotype_samples}{Export actual chunk-local main-iteration allele
 draws as \code{FORMAT/HS}. See \code{\link[=rglimpse2_phase]{rglimpse2_phase()}} for encoding and scope.}
+
+\item{read_fraction}{Retention probability for read-name templates before pileup,
+in \verb{[0, 1]}. Zero keeps none; one preserves all reads. Uses samtools view's
+HTSlib X31/Wang hash and low-24-bit threshold. Mates with the same name
+share the decision; fractions are nested for a fixed seed. Existing read
+filters and the per-site \code{max_depth} cap still apply.}
+
+\item{read_fraction_seed}{Integer in \verb{[0, 2147483647]}, default \code{0},
+independent of \code{seed}. Matches \verb{samtools view --subsample-seed} on the
+same C runtime: nonzero seeds are expanded by \code{srand()}/\code{rand()}. Use zero
+for identical read selection across C runtimes.}
 }
 \value{
 \code{RGlimpse2RunResult} with \code{output_bcf} and \code{output_index} paths, or

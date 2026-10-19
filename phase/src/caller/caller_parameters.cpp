@@ -25,6 +25,7 @@
 
 #include "../../../versions/versions.h"
 #include <caller/caller_header.h>
+#include <cmath>
 
 
 void caller::declare_options() {
@@ -81,6 +82,8 @@ void caller::declare_options() {
 			("mapq", boost::program_options::value< int >()->default_value(10), "Minimum mapping quality for a read to be considered")
 			("baseq", boost::program_options::value< int >()->default_value(10), "Minimum phred-scalde based quality to be considered")
 			("max-depth", boost::program_options::value< int >()->default_value(40), "(Expert setting) Max read depth at a site. If the number of reads exceeds this number, the reads at the sites are downsampled (e.g. to avoid artifactual coverage increases)")
+			("read-fraction", bpo::value<double>()->default_value(1.0), "Fraction of read-name templates retained before pileup [0-1]; 0 keeps none")
+			("read-fraction-seed", bpo::value<int>()->default_value(0), "Non-negative samtools subsampling seed, independent of --seed")
 			("keep-orphan-reads", "(Expert setting) Keep paired end reads where one of mates is unmapped")
 			("ignore-orientation", "(Expert setting) Ignore the orientation of mate pairs")
 			("check-proper-pairing", "(Expert setting) Discard reads that are not properly paired")
@@ -105,7 +108,7 @@ void caller::parse_command_line(std::vector < std::string > & args) {
 	try {
 		bpo::store(bpo::command_line_parser(args).options(descriptions).run(), options);
 		bpo::notify(options);
-	} catch ( const boost::program_options::error& e ) { std::cerr << "Error parsing command line arguments: " << std::string(e.what()) << std::endl; exit(0); }
+	} catch ( const boost::program_options::error& e ) { std::cerr << "Error parsing command line arguments: " << std::string(e.what()) << std::endl; exit(EXIT_FAILURE); }
 
 	if (options.count("log") && !vrb.open_log(options["log"].as < std::string > ()))
 		vrb.error("Impossible to create log file [" + options["log"].as < std::string > () +"]");
@@ -271,6 +274,14 @@ void caller::check_options() {
 		if (!options.count("pbwt-depth") || options["pbwt-depth"].as < int > () <= 0) vrb.error("Option --pbwt-depth is not present or set to a non-positive value");
 		if (!options.count("pbwt-modulo-cm") || options["pbwt-modulo-cm"].as < float > () <= 0) vrb.error("Option --pbwt-modulo-cm is not present or set to a non-positive value");
 	}
+
+	const double read_fraction = options["read-fraction"].as<double>();
+	if (!std::isfinite(read_fraction) || read_fraction < 0.0 || read_fraction > 1.0)
+		vrb.error("--read-fraction must be finite and in [0, 1]");
+	if (options["read-fraction-seed"].as<int>() < 0)
+		vrb.error("--read-fraction-seed must be a non-negative integer");
+	if (options.count("input-gl") && (!options["read-fraction"].defaulted() || !options["read-fraction-seed"].defaulted()))
+		vrb.error("--read-fraction and --read-fraction-seed require --bam-file or --bam-list");
 
 	if (options["max-depth"].as <int> () < 10) vrb.error("Max depth has been set too low [< 10].");
 }

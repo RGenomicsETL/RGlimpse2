@@ -92,9 +92,15 @@ write_layer_patch 0010-bam-likelihood-and-flat-het-corrections.patch \
   5f7e69792b3755ac7c9faa694f94a0b42d405ae4 2f79f47711da474f6565546d51274c84ae8b4010 -- \
   phase/src/io/genotype_bam_caller.cpp phase/src/models/phasing_hmm.cpp
 write_layer_patch 0011-retain-chunk-local-haplotype-samples.patch \
-  2f79f47711da474f6565546d51274c84ae8b4010 -- \
+  2f79f47711da474f6565546d51274c84ae8b4010 90a99a301d312e91a2131a964d4e4df543fd39af -- \
   common/src/objects/genotype.cpp common/src/objects/genotype.h \
   phase/src/caller/caller_algorithm.cpp phase/src/caller/caller_parameters.cpp \
   phase/src/io/genotype_writer.cpp ligate/src/ligater/ligater_algorithm.cpp
+
+write_layer_patch 0013-subsample-bam-read-templates.patch \
+  085541c2b8592c2fb722a17fc116c47b22ba218b -- \
+  phase/src/caller/caller_initialise.cpp phase/src/caller/caller_parameters.cpp \
+  phase/src/containers/glimpse_mpileup.cpp phase/src/containers/glimpse_mpileup.h \
+  phase/src/io/genotype_bam_caller.cpp
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

@@ -29,7 +29,7 @@ glimpse_mpileup::glimpse_mpileup() :
 	n_tar_samples(0), n_tar_haps(0),
 	n_tar_diploid(0),n_tar_haploid(0), max_ploidy(0),fploidy(0),
 	fai(NULL),
-	keep_orphan(false),check_orientation(false),check_proper_pair(true),fflag(0),illumina13(false),min_mq(0),min_bq(0),max_dp(255)
+	keep_orphan(false),check_orientation(false),check_proper_pair(true),fflag(0),illumina13(false),min_mq(0),min_bq(0),max_dp(255),read_fraction(1.0),read_fraction_seed(0)
 {
 }
 
@@ -38,7 +38,8 @@ glimpse_mpileup::glimpse_mpileup(const glimpse_mpileup& mpileup_data) :
 	n_tar_samples(mpileup_data.n_tar_samples), n_tar_haps(mpileup_data.n_tar_haps),
 	n_tar_diploid(mpileup_data.n_tar_diploid),n_tar_haploid(mpileup_data.n_tar_haploid), max_ploidy(mpileup_data.max_ploidy),fploidy(mpileup_data.fploidy),
 	fai(mpileup_data.fai),
-	keep_orphan(mpileup_data.keep_orphan),check_orientation(mpileup_data.check_orientation),check_proper_pair(mpileup_data.check_proper_pair),fflag(mpileup_data.fflag),illumina13(mpileup_data.illumina13),min_mq(mpileup_data.min_mq),min_bq(mpileup_data.min_bq),max_dp(mpileup_data.max_dp)
+	keep_orphan(mpileup_data.keep_orphan),check_orientation(mpileup_data.check_orientation),check_proper_pair(mpileup_data.check_proper_pair),fflag(mpileup_data.fflag),illumina13(mpileup_data.illumina13),min_mq(mpileup_data.min_mq),min_bq(mpileup_data.min_bq),max_dp(mpileup_data.max_dp),
+	read_fraction(mpileup_data.read_fraction),read_fraction_seed(mpileup_data.read_fraction_seed)
 {
 	tar_ploidy = mpileup_data.tar_ploidy;
 	tar_ind2gt = mpileup_data.tar_ind2gt;

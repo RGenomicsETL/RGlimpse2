@@ -84,6 +84,8 @@ local({
     mapq = 17L,
     baseq = 23L,
     max_depth = 61L,
+    read_fraction = 0.375,
+    read_fraction_seed = 17L,
     call_indels = TRUE,
     keep_orphan_reads = TRUE,
     ignore_orientation = TRUE,
@@ -116,7 +118,9 @@ local({
   expect_true("--haplotype-samples" %in% arguments)
   argument_value <- function(flag) {
     position <- match(flag, arguments)
-    if (is.na(position) || position == length(arguments)) return(NA_character_)
+    if (is.na(position) || position == length(arguments)) {
+      return(NA_character_)
+    }
     arguments[[position + 1L]]
   }
   expect_false("--bam-file" %in% arguments)
@@ -129,6 +133,8 @@ local({
   expect_identical(argument_value("--mapq"), "17")
   expect_identical(argument_value("--baseq"), "23")
   expect_identical(argument_value("--max-depth"), "61")
+  expect_identical(argument_value("--read-fraction"), "0.375")
+  expect_identical(argument_value("--read-fraction-seed"), "17")
   expect_identical(argument_value("--burnin"), "2")
   expect_identical(argument_value("--main"), "3")
   expect_identical(argument_value("--ne"), "120000")
@@ -136,24 +142,33 @@ local({
   expect_identical(argument_value("--pbwt-modulo-cm"), "0.25")
   expect_identical(argument_value("--Kinit"), "64")
   expect_identical(argument_value("--Kpbwt"), "96")
-  expect_true(all(c(
-    "--call-indels",
-    "--keep-orphan-reads",
-    "--ignore-orientation",
-    "--check-proper-pairing",
-    "--keep-failed-qc",
-    "--keep-duplicates"
-  ) %in% arguments))
-  expect_true(paste0(
-    "bam-list-content=",
-    haploid_bam,
-    "\tsample-haploid"
-  ) %in% arguments)
-  expect_true(paste0(
-    "bam-list-content=",
-    diploid_cram,
-    "\tsample-diploid"
-  ) %in% arguments)
+  expect_true(all(
+    c(
+      "--call-indels",
+      "--keep-orphan-reads",
+      "--ignore-orientation",
+      "--check-proper-pairing",
+      "--keep-failed-qc",
+      "--keep-duplicates"
+    ) %in%
+      arguments
+  ))
+  expect_true(
+    paste0(
+      "bam-list-content=",
+      haploid_bam,
+      "\tsample-haploid"
+    ) %in%
+      arguments
+  )
+  expect_true(
+    paste0(
+      "bam-list-content=",
+      diploid_cram,
+      "\tsample-diploid"
+    ) %in%
+      arguments
+  )
   expect_true(
     "samples-file-content=sample-haploid\t1" %in% arguments
   )
@@ -294,6 +309,33 @@ local({
     readLines(paste0(index_racing_output, ".csi"), warn = FALSE),
     "concurrent index"
   )
+
+  for (settings in list(
+    list(read_fraction = -0.1),
+    list(read_fraction = 1.1),
+    list(read_fraction_seed = -1L),
+    list(read_fraction_seed = 0.5)
+  )) {
+    invalid <- tryCatch(
+      do.call(
+        rglimpse2_phase_bams,
+        c(
+          list(
+            alignments = alignments,
+            reference_bin = reference_bin,
+            output_bcf = file.path(root, "invalid-fraction.bcf"),
+            executable = executable,
+            seed = 3L,
+            reference_fasta = reference_fasta,
+            reference_fasta_index = reference_fasta_index
+          ),
+          settings
+        )
+      ),
+      rglimpse2_contract_violation = identity
+    )
+    expect_identical(invalid$details$argument, names(settings))
+  }
 
   invalid_ploidy <- alignments
   invalid_ploidy$sample_ploidy[[1L]] <- 3L

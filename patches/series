@@ -10,3 +10,4 @@
 0010-bam-likelihood-and-flat-het-corrections.patch
 0011-retain-chunk-local-haplotype-samples.patch
 0012-ligate-diploid-alleles-and-phase-sets.patch
+0013-subsample-bam-read-templates.patch

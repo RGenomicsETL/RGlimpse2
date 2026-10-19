@@ -1,0 +1,146 @@
+diff --git a/phase/src/caller/caller_initialise.cpp b/phase/src/caller/caller_initialise.cpp
+index b5c3134..360fe81 100644
+--- a/phase/src/caller/caller_initialise.cpp
++++ b/phase/src/caller/caller_initialise.cpp
+@@ -292,6 +292,13 @@ void caller::setup_mpileup()
+ 	M.min_mq = options["mapq"].as <int> ();
+ 	M.min_bq = options["baseq"].as<int>();
+ 	M.max_dp = options["max-depth"].as<int>();
++	M.read_fraction = options["read-fraction"].as<double>();
++	M.read_fraction_seed = options["read-fraction-seed"].as<int>();
++	if (M.read_fraction < 1.0 && M.read_fraction_seed != 0)
++	{
++		std::srand(M.read_fraction_seed);
++		M.read_fraction_seed = std::rand();
++	}
+ 
+ 	if (M.min_mq <0) vrb.error("Error setting min map quality. Value is negative: " + std::to_string(M.min_mq) + ".");
+ 	if (M.min_bq <0) vrb.error("Error setting min base quality. Value is negative: " + std::to_string(M.min_bq) + ".");
+diff --git a/phase/src/caller/caller_parameters.cpp b/phase/src/caller/caller_parameters.cpp
+index 56bfae5..b64af9a 100644
+--- a/phase/src/caller/caller_parameters.cpp
++++ b/phase/src/caller/caller_parameters.cpp
+@@ -25,6 +25,7 @@
+ 
+ #include "../../../versions/versions.h"
+ #include <caller/caller_header.h>
++#include <cmath>
+ 
+ 
+ void caller::declare_options() {
+@@ -81,6 +82,8 @@ void caller::declare_options() {
+ 			("mapq", boost::program_options::value< int >()->default_value(10), "Minimum mapping quality for a read to be considered")
+ 			("baseq", boost::program_options::value< int >()->default_value(10), "Minimum phred-scalde based quality to be considered")
+ 			("max-depth", boost::program_options::value< int >()->default_value(40), "(Expert setting) Max read depth at a site. If the number of reads exceeds this number, the reads at the sites are downsampled (e.g. to avoid artifactual coverage increases)")
++			("read-fraction", bpo::value<double>()->default_value(1.0), "Fraction of read-name templates retained before pileup [0-1]; 0 keeps none")
++			("read-fraction-seed", bpo::value<int>()->default_value(0), "Non-negative samtools subsampling seed, independent of --seed")
+ 			("keep-orphan-reads", "(Expert setting) Keep paired end reads where one of mates is unmapped")
+ 			("ignore-orientation", "(Expert setting) Ignore the orientation of mate pairs")
+ 			("check-proper-pairing", "(Expert setting) Discard reads that are not properly paired")
+@@ -105,7 +108,7 @@ void caller::parse_command_line(std::vector < std::string > & args) {
+ 	try {
+ 		bpo::store(bpo::command_line_parser(args).options(descriptions).run(), options);
+ 		bpo::notify(options);
+-	} catch ( const boost::program_options::error& e ) { std::cerr << "Error parsing command line arguments: " << std::string(e.what()) << std::endl; exit(0); }
++	} catch ( const boost::program_options::error& e ) { std::cerr << "Error parsing command line arguments: " << std::string(e.what()) << std::endl; exit(EXIT_FAILURE); }
+ 
+ 	if (options.count("log") && !vrb.open_log(options["log"].as < std::string > ()))
+ 		vrb.error("Impossible to create log file [" + options["log"].as < std::string > () +"]");
+@@ -272,6 +275,14 @@ void caller::check_options() {
+ 		if (!options.count("pbwt-modulo-cm") || options["pbwt-modulo-cm"].as < float > () <= 0) vrb.error("Option --pbwt-modulo-cm is not present or set to a non-positive value");
+ 	}
+ 
++	const double read_fraction = options["read-fraction"].as<double>();
++	if (!std::isfinite(read_fraction) || read_fraction < 0.0 || read_fraction > 1.0)
++		vrb.error("--read-fraction must be finite and in [0, 1]");
++	if (options["read-fraction-seed"].as<int>() < 0)
++		vrb.error("--read-fraction-seed must be a non-negative integer");
++	if (options.count("input-gl") && (!options["read-fraction"].defaulted() || !options["read-fraction-seed"].defaulted()))
++		vrb.error("--read-fraction and --read-fraction-seed require --bam-file or --bam-list");
++
+ 	if (options["max-depth"].as <int> () < 10) vrb.error("Max depth has been set too low [< 10].");
+ }
+ 
+diff --git a/phase/src/containers/glimpse_mpileup.cpp b/phase/src/containers/glimpse_mpileup.cpp
+index f905d89..20446da 100644
+--- a/phase/src/containers/glimpse_mpileup.cpp
++++ b/phase/src/containers/glimpse_mpileup.cpp
+@@ -29,7 +29,7 @@ glimpse_mpileup::glimpse_mpileup() :
+ 	n_tar_samples(0), n_tar_haps(0),
+ 	n_tar_diploid(0),n_tar_haploid(0), max_ploidy(0),fploidy(0),
+ 	fai(NULL),
+-	keep_orphan(false),check_orientation(false),check_proper_pair(true),fflag(0),illumina13(false),min_mq(0),min_bq(0),max_dp(255)
++	keep_orphan(false),check_orientation(false),check_proper_pair(true),fflag(0),illumina13(false),min_mq(0),min_bq(0),max_dp(255),read_fraction(1.0),read_fraction_seed(0)
+ {
+ }
+ 
+@@ -38,7 +38,8 @@ glimpse_mpileup::glimpse_mpileup(const glimpse_mpileup& mpileup_data) :
+ 	n_tar_samples(mpileup_data.n_tar_samples), n_tar_haps(mpileup_data.n_tar_haps),
+ 	n_tar_diploid(mpileup_data.n_tar_diploid),n_tar_haploid(mpileup_data.n_tar_haploid), max_ploidy(mpileup_data.max_ploidy),fploidy(mpileup_data.fploidy),
+ 	fai(mpileup_data.fai),
+-	keep_orphan(mpileup_data.keep_orphan),check_orientation(mpileup_data.check_orientation),check_proper_pair(mpileup_data.check_proper_pair),fflag(mpileup_data.fflag),illumina13(mpileup_data.illumina13),min_mq(mpileup_data.min_mq),min_bq(mpileup_data.min_bq),max_dp(mpileup_data.max_dp)
++	keep_orphan(mpileup_data.keep_orphan),check_orientation(mpileup_data.check_orientation),check_proper_pair(mpileup_data.check_proper_pair),fflag(mpileup_data.fflag),illumina13(mpileup_data.illumina13),min_mq(mpileup_data.min_mq),min_bq(mpileup_data.min_bq),max_dp(mpileup_data.max_dp),
++	read_fraction(mpileup_data.read_fraction),read_fraction_seed(mpileup_data.read_fraction_seed)
+ {
+ 	tar_ploidy = mpileup_data.tar_ploidy;
+ 	tar_ind2gt = mpileup_data.tar_ind2gt;
+diff --git a/phase/src/containers/glimpse_mpileup.h b/phase/src/containers/glimpse_mpileup.h
+index 0be1875..a37fe72 100644
+--- a/phase/src/containers/glimpse_mpileup.h
++++ b/phase/src/containers/glimpse_mpileup.h
+@@ -56,6 +56,8 @@ struct aux_t {     			// auxiliary data structure
+ 	hts_idx_t *idx;
+ 	bam_hdr_t * hdr;			// the file header
+ 	hts_itr_t * iter;			// NULL if a region not specified
++	double read_fraction;
++	uint32_t read_fraction_seed;
+ 	int min_mapQ;				// mapQ threshold for filter
+ 	//ref_t *ref;
+ 	//faidx_t* fai;
+@@ -151,6 +153,8 @@ public:
+ 	int min_mq;
+ 	int min_bq;
+ 	int max_dp;
++	double read_fraction;
++	uint32_t read_fraction_seed;
+ };
+ 
+ #endif /* SRC_CONTAINERS_GLIMPSE_MPILEUP_H_ */
+diff --git a/phase/src/io/genotype_bam_caller.cpp b/phase/src/io/genotype_bam_caller.cpp
+index 0d26dfb..349a4e3 100644
+--- a/phase/src/io/genotype_bam_caller.cpp
++++ b/phase/src/io/genotype_bam_caller.cpp
+@@ -26,6 +26,7 @@
+ #include <io/genotype_bam_caller.h>
+ #include <thread>
+ #include <chrono>
++#include <htslib/khash.h>
+ 
+ static bool is_acgt_sequence(const std::string& allele)
+ {
+@@ -43,7 +44,15 @@ static int read_bam(void *data, bam1_t *b)
+ 	do{
+ 		ret =  (aux->iter? sam_itr_next(aux->fp, aux->iter, b) : sam_read1(aux->fp, aux->hdr, b));
+ 		if (ret < 0) break;
+-		else if (b->core.tid < 0 || (b->core.flag & aux->fflag) || b->core.qual < aux->min_mapQ) {skip = 1; continue;} // unmapped
++		if (aux->read_fraction < 1.0)
++		{
++			const uint32_t hash = __ac_Wang_hash(__ac_X31_hash_string(bam_get_qname(b)) ^ aux->read_fraction_seed);
++			if (static_cast<double>(hash & 0xffffff) / 0x1000000 >= aux->read_fraction)
++			{
++				skip = 1; continue;
++			}
++		}
++		if (b->core.tid < 0 || (b->core.flag & aux->fflag) || b->core.qual < aux->min_mapQ) {skip = 1; continue;} // unmapped
+ 		else if(b->core.flag & BAM_FPAIRED)
+ 		{ //paired read
+ 			if (b->core.flag & BAM_FMUNMAP) //mate is unmapped
+@@ -119,6 +128,8 @@ genotype_bam_caller::genotype_bam_caller(
+ 	aux_data.fflag = mpileup_data.fflag;
+ 	aux_data.keep_orphan = mpileup_data.keep_orphan;
+ 	aux_data.min_mapQ = mpileup_data.min_mq;
++	aux_data.read_fraction = mpileup_data.read_fraction;
++	aux_data.read_fraction_seed = mpileup_data.read_fraction_seed;
+ 
+ 
+ 	aux_data.iter=nullptr;

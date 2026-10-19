@@ -60,6 +60,8 @@ local({
     mapq = 17L,
     baseq = 23L,
     max_depth = 61L,
+    read_fraction = 0.375,
+    read_fraction_seed = 17L,
     call_indels = TRUE,
     keep_orphan_reads = TRUE,
     ignore_orientation = TRUE,
@@ -86,7 +88,9 @@ local({
   arguments <- readLines(output_bcf, warn = FALSE, encoding = "UTF-8")
   argument_value <- function(flag) {
     position <- match(flag, arguments)
-    if (is.na(position) || position == length(arguments)) return(NA_character_)
+    if (is.na(position) || position == length(arguments)) {
+      return(NA_character_)
+    }
     arguments[[position + 1L]]
   }
   expect_identical(argument_value("--bam-file"), input_bam)
@@ -99,14 +103,19 @@ local({
   expect_identical(argument_value("--mapq"), "17")
   expect_identical(argument_value("--baseq"), "23")
   expect_identical(argument_value("--max-depth"), "61")
-  expect_true(all(c(
-    "--call-indels",
-    "--keep-orphan-reads",
-    "--ignore-orientation",
-    "--check-proper-pairing",
-    "--keep-failed-qc",
-    "--keep-duplicates"
-  ) %in% arguments))
+  expect_identical(argument_value("--read-fraction"), "0.375")
+  expect_identical(argument_value("--read-fraction-seed"), "17")
+  expect_true(all(
+    c(
+      "--call-indels",
+      "--keep-orphan-reads",
+      "--ignore-orientation",
+      "--check-proper-pairing",
+      "--keep-failed-qc",
+      "--keep-duplicates"
+    ) %in%
+      arguments
+  ))
   expect_true("samples-file-content=sample-A 1" %in% arguments)
   sample_file <- argument_value("--samples-file")
   expect_true(nzchar(sample_file))
@@ -117,6 +126,53 @@ local({
       force(expression),
       rglimpse2_contract_violation = identity
     )
+  }
+
+  for (fraction in list(
+    -0.1,
+    1.1,
+    NA_real_,
+    NaN,
+    Inf,
+    "0.5",
+    numeric(),
+    c(0, 1)
+  )) {
+    invalid <- capture_contract(rglimpse2_phase_bam(
+      input_bam,
+      input_index,
+      reference_bin,
+      file.path(root, "invalid.bcf"),
+      executable,
+      seed = 1L,
+      sample_name = "target",
+      read_fraction = fraction
+    ))
+    expect_identical(invalid$code, "invalid_number")
+    expect_identical(invalid$details$argument, "read_fraction")
+  }
+  for (fraction_seed in list(
+    -1L,
+    0.5,
+    NA_integer_,
+    Inf,
+    2147483648,
+    "1",
+    integer(),
+    c(0L, 1L)
+  )) {
+    invalid <- capture_contract(rglimpse2_phase_bam(
+      input_bam,
+      input_index,
+      reference_bin,
+      file.path(root, "invalid.bcf"),
+      executable,
+      seed = 1L,
+      sample_name = "target",
+      read_fraction_seed = fraction_seed
+    ))
+    expect_identical(invalid$code, "invalid_integer")
+    expect_identical(invalid$details$argument, "read_fraction_seed")
   }
 
   unsupported_output <- capture_contract(rglimpse2_phase_bam(
@@ -206,6 +262,14 @@ local({
   )
   expect_true(S7::S7_inherits(cram_result, RGlimpse2RunResult))
   cram_arguments <- readLines(cram_output, warn = FALSE, encoding = "UTF-8")
+  expect_identical(
+    cram_arguments[[match("--read-fraction", cram_arguments) + 1L]],
+    "1"
+  )
+  expect_identical(
+    cram_arguments[[match("--read-fraction-seed", cram_arguments) + 1L]],
+    "0"
+  )
   fasta_position <- match("--fasta", cram_arguments)
   expect_identical(cram_arguments[[fasta_position + 1L]], reference_fasta)
 })

@@ -26,6 +26,7 @@
 #include <io/genotype_bam_caller.h>
 #include <thread>
 #include <chrono>
+#include <htslib/khash.h>
 
 static bool is_acgt_sequence(const std::string& allele)
 {
@@ -43,7 +44,15 @@ static int read_bam(void *data, bam1_t *b)
 	do{
 		ret =  (aux->iter? sam_itr_next(aux->fp, aux->iter, b) : sam_read1(aux->fp, aux->hdr, b));
 		if (ret < 0) break;
-		else if (b->core.tid < 0 || (b->core.flag & aux->fflag) || b->core.qual < aux->min_mapQ) {skip = 1; continue;} // unmapped
+		if (aux->read_fraction < 1.0)
+		{
+			const uint32_t hash = __ac_Wang_hash(__ac_X31_hash_string(bam_get_qname(b)) ^ aux->read_fraction_seed);
+			if (static_cast<double>(hash & 0xffffff) / 0x1000000 >= aux->read_fraction)
+			{
+				skip = 1; continue;
+			}
+		}
+		if (b->core.tid < 0 || (b->core.flag & aux->fflag) || b->core.qual < aux->min_mapQ) {skip = 1; continue;} // unmapped
 		else if(b->core.flag & BAM_FPAIRED)
 		{ //paired read
 			if (b->core.flag & BAM_FMUNMAP) //mate is unmapped
@@ -119,6 +128,8 @@ genotype_bam_caller::genotype_bam_caller(
 	aux_data.fflag = mpileup_data.fflag;
 	aux_data.keep_orphan = mpileup_data.keep_orphan;
 	aux_data.min_mapQ = mpileup_data.min_mq;
+	aux_data.read_fraction = mpileup_data.read_fraction;
+	aux_data.read_fraction_seed = mpileup_data.read_fraction_seed;
 
 
 	aux_data.iter=nullptr;
