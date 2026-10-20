@@ -38,7 +38,9 @@ rglimpse2_phase_bam(
   k_init = 1000L,
   k_pbwt = 2000L,
   log = character(),
-  haplotype_samples = FALSE
+  haplotype_samples = FALSE,
+  read_fraction = 1,
+  read_fraction_seed = 0L
 )
 ```
 
@@ -163,6 +165,21 @@ rglimpse2_phase_bam(
   See
   [`rglimpse2_phase()`](https://rgenomicsetl.github.io/RGlimpse2/reference/rglimpse2_phase.md)
   for encoding and scope.
+
+- read_fraction:
+
+  Retention probability for read-name templates before pileup, in
+  `[0, 1]`. Zero keeps none; one preserves all reads. Uses samtools
+  view's HTSlib X31/Wang hash and low-24-bit threshold. Mates with the
+  same name share the decision; fractions are nested for a fixed seed.
+  Existing read filters and the per-site `max_depth` cap still apply.
+
+- read_fraction_seed:
+
+  Integer in `[0, 2147483647]`, default `0`, independent of `seed`.
+  Matches `samtools view --subsample-seed` on the same C runtime:
+  nonzero seeds are expanded by `srand()`/`rand()`. Use zero for
+  identical read selection across C runtimes.
 
 ## Value
 

@@ -86,7 +86,9 @@ parallelize independent chunks.</p>
 <span>  k_init <span class="op">=</span> <span class="fl">1000L</span>,</span>
 <span>  k_pbwt <span class="op">=</span> <span class="fl">2000L</span>,</span>
 <span>  log <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  haplotype_samples <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  haplotype_samples <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  read_fraction <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  read_fraction_seed <span class="op">=</span> <span class="fl">0L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -210,6 +212,21 @@ paired.</p></dd>
 <dt id="arg-haplotype-samples">haplotype_samples<a class="anchor" aria-label="anchor" href="#arg-haplotype-samples"></a></dt>
 <dd><p>Export actual chunk-local main-iteration allele
 draws as <code>FORMAT/HS</code>. See <code><a href="rglimpse2_phase.html">rglimpse2_phase()</a></code> for encoding and scope.</p></dd>
+
+
+<dt id="arg-read-fraction">read_fraction<a class="anchor" aria-label="anchor" href="#arg-read-fraction"></a></dt>
+<dd><p>Retention probability for read-name templates before pileup,
+in <code>[0, 1]</code>. Zero keeps none; one preserves all reads. Uses samtools view's
+HTSlib X31/Wang hash and low-24-bit threshold. Mates with the same name
+share the decision; fractions are nested for a fixed seed. Existing read
+filters and the per-site <code>max_depth</code> cap still apply.</p></dd>
+
+
+<dt id="arg-read-fraction-seed">read_fraction_seed<a class="anchor" aria-label="anchor" href="#arg-read-fraction-seed"></a></dt>
+<dd><p>Integer in <code>[0, 2147483647]</code>, default <code>0</code>,
+independent of <code>seed</code>. Matches <code>samtools view --subsample-seed</code> on the
+same C runtime: nonzero seeds are expanded by <code>srand()</code>/<code>rand()</code>. Use zero
+for identical read selection across C runtimes.</p></dd>
 
 </dl></div>
     <div class="section level2">
