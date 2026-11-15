@@ -25,7 +25,8 @@
 #'   Required with `reference_fasta` and must be `paste0(reference_fasta,
 #'   ".fai")`, which is the path HTSlib will discover.
 #' @param mapq Minimum read mapping quality.
-#' @param baseq Minimum base quality.
+#' @param baseq Minimum base quality. Qualities above 40 are used as 40, and
+#'   bases covered by both mates of an overlapping proper pair count once.
 #' @param max_depth Maximum reads retained at one site before downsampling.
 #' @param read_fraction Retention probability for read-name templates before pileup,
 #'   in `[0, 1]`. Zero keeps none; one preserves all reads. Uses samtools view's

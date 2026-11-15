@@ -1,4 +1,13 @@
-# RGlimpse2 (development version)
+# RGlimpse2 0.0.0.9009
+
+- Cap direct-alignment base qualities at Q40 and count bases covered by both
+  mates of an overlapping proper pair once (upstream #325). On NA12878 at 1x
+  (1000G chr22, 2.8 Mb), r2 rises from 0.20 to 0.36 at AF 0.1-1% and from
+  0.94 to 0.96 at AF 20-50%.
+- Skip monomorphic reference records in the BAM-input panel parse as the scan
+  already did (upstream #340), write INFO scores for haploid and mixed-ploidy
+  targets (upstream #334), and keep chunk buffer sizes in cM as floating
+  point. These fixes can change phased and chunked outputs.
 
 - `rglimpse2_phase()`, `rglimpse2_phase_bam()` and `rglimpse2_phase_bams()`
   accept `haplotype_samples = TRUE` to export actual native main-iteration

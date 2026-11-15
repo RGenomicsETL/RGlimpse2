@@ -98,9 +98,14 @@ write_layer_patch 0011-retain-chunk-local-haplotype-samples.patch \
   phase/src/io/genotype_writer.cpp ligate/src/ligater/ligater_algorithm.cpp
 
 write_layer_patch 0013-subsample-bam-read-templates.patch \
-  085541c2b8592c2fb722a17fc116c47b22ba218b -- \
+  085541c2b8592c2fb722a17fc116c47b22ba218b 147f15973db973d7c4b0b61580e277bfd6eb157a -- \
   phase/src/caller/caller_initialise.cpp phase/src/caller/caller_parameters.cpp \
   phase/src/containers/glimpse_mpileup.cpp phase/src/containers/glimpse_mpileup.h \
   phase/src/io/genotype_bam_caller.cpp
+write_layer_patch 0014-upstream-accuracy-fixes.patch \
+  147f15973db973d7c4b0b61580e277bfd6eb157a -- \
+  chunk/src/chunker/chunker_algorithm.cpp chunk/src/chunker/chunker_parameters.cpp \
+  phase/src/containers/glimpse_mpileup.h phase/src/io/genotype_bam_caller.cpp \
+  phase/src/io/genotype_reader.cpp phase/src/io/genotype_writer.cpp
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

@@ -1,0 +1,209 @@
+diff --git a/chunk/src/chunker/chunker_algorithm.cpp b/chunk/src/chunker/chunker_algorithm.cpp
+index 4e1de94..a045499 100644
+--- a/chunk/src/chunker/chunker_algorithm.cpp
++++ b/chunk/src/chunker/chunker_algorithm.cpp
+@@ -169,7 +169,8 @@ void chunker::split_sequential(output_file & fd, long int & cidx, std::string &
+ 
+ void chunker::add_buffer(const long int start_idx, const long int stop_idx, long int& left_idx, long int& right_idx)
+ {
+-	long int left_mb_size = -1, left_cm_size = -1, left_count = -1;
++	long int left_mb_size = -1, left_count = -1;
++	float left_cm_size = -1;
+ 	if (start_idx > buffer_count) {
+ 		left_idx = start_idx - buffer_count;
+ 		do {
+@@ -180,7 +181,8 @@ void chunker::add_buffer(const long int start_idx, const long int stop_idx, long
+ 		} while (((left_idx > 0) && ((left_cm_size < buffer_cm) || (left_mb_size < buffer_mb) || left_count < buffer_count)));
+ 	} else { left_idx = 0; }
+ 
+-	long int right_mb_size = -1, right_cm_size = -1, right_count = -1;
++	long int right_mb_size = -1, right_count = -1;
++	float right_cm_size = -1;
+ 	if (stop_idx < (positions_all_mb.size() - buffer_count)) {
+ 		right_idx = stop_idx + buffer_count - 1;
+ 		do {
+@@ -215,7 +217,7 @@ void chunker::chunk() {
+ 		readerGM.readGeneticMapFile(options["map"].as < std::string > ());
+ 		setGeneticMap(readerGM, map_positions_all, positions_all_mb, positions_all_cm);
+ 	} else setGeneticMap(map_positions_all, positions_all_mb, positions_all_cm);
+-	vrb.bullet("Region spans " + stb.str(positions_all_mb.back() - positions_all_mb[0] + 1) + " bp and " + stb.str(positions_all_cm.back() - positions_all_cm[0] + 1, 2) + " cM");
++	vrb.bullet("Region spans " + stb.str(positions_all_mb.back() - positions_all_mb[0] + 1) + " bp and " + stb.str(positions_all_cm.back() - positions_all_cm[0], 2) + " cM");
+ 	if (positions_all_mb.size() == 0) vrb.error("No markers in region: " + options["region"].as < std::string > () + ". Check chromosome name and start/end positions.");
+ 
+ 	cnk_info.chr = chrID;
+diff --git a/chunk/src/chunker/chunker_parameters.cpp b/chunk/src/chunker/chunker_parameters.cpp
+index cb89608..14346ef 100644
+--- a/chunk/src/chunker/chunker_parameters.cpp
++++ b/chunk/src/chunker/chunker_parameters.cpp
+@@ -99,15 +99,15 @@ void chunker::check_options() {
+ 	if (options["threads"].as < long int > () < 1)
+ 		vrb.error("Number of threads is a strictly positive number.");
+ 
+-	if (options["window-cm"].as < float > () <= 0)
+-		vrb.error("Window size in cM must be positive");
++	if (options["window-cm"].as < float > () < 0)
++		vrb.error("Window size in cM must not be negative");
+ 	if (options["window-mb"].as < float > () <= 0)
+ 		vrb.error("Window size in Mb must be positive");
+ 	if (options["window-count"].as < long int > () <= 0)
+ 		vrb.error("Window size in number of markers must be positive");
+ 
+-	if (options["buffer-cm"].as < float > () <= 0)
+-		vrb.error("Buffer size in cM must be positive");
++	if (options["buffer-cm"].as < float > () < 0)
++		vrb.error("Buffer size in cM must not be negative");
+ 	if (options["buffer-mb"].as < float > () <= 0)
+ 		vrb.error("Buffer size in Mb must be positive");
+ 	if (options["buffer-count"].as < long int > () <= 0)
+diff --git a/phase/src/containers/glimpse_mpileup.h b/phase/src/containers/glimpse_mpileup.h
+index a37fe72..2a274d9 100644
+--- a/phase/src/containers/glimpse_mpileup.h
++++ b/phase/src/containers/glimpse_mpileup.h
+@@ -114,7 +114,7 @@ struct call_t
+ 	sample_gl gls;
+ 	bcf_call_aux_t bca;
+ 	bcf_call_ret1_t bcr;
+-	bam_plp_t s_plp;
++	bam_mplp_t s_plp;
+ 	const bam_pileup1_t* v_plp;
+ 	int n_plp;
+ 	bool snp_called;
+diff --git a/phase/src/io/genotype_bam_caller.cpp b/phase/src/io/genotype_bam_caller.cpp
+index 349a4e3..618bdf8 100644
+--- a/phase/src/io/genotype_bam_caller.cpp
++++ b/phase/src/io/genotype_bam_caller.cpp
+@@ -37,6 +37,10 @@ static bool is_acgt_sequence(const std::string& allele)
+ 	return true;
+ }
+ 
++// Errors made before sequencing (PCR, cluster amplification) occur at roughly 1e-4 per base, so no base is more
++// reliable than Q40 whatever quality the sequencer reports
++constexpr int MAX_BASE_QUALITY = 40;
++
+ static int read_bam(void *data, bam1_t *b)
+ {
+ 	aux_t * aux = (aux_t*) data;
+@@ -255,11 +259,17 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
+ 	const int sample_ploidyP1 = mpileup_data.tar_ploidy[i]+1;
+ 
+ 	caller.n_plp = 0;
+-	caller.s_plp = bam_plp_init(read_bam, (void*)&aux_data);
++	// Only the multi-file pileup API (here over one file) detects overlapping mates. Where both mates of a proper
++	// pair cover a base, htslib sets one quality to 0 and the other to their sum if the bases agree, or to 0.8x the
++	// higher one if not, so each fragment counts once
++	void * aux_ptr = &aux_data;
++	caller.s_plp = bam_mplp_init(1, read_bam, &aux_ptr);
++	if (bam_mplp_init_overlaps(caller.s_plp) < 0) { bam_mplp_destroy(caller.s_plp); return -1; }
+ 	unsigned long linecount = 0, prevstart = 0, prevend = 0;
+ 	const bam_pileup1_t * v_plp;
++	int plp_ret;
+ 
+-	while (((caller.v_plp = bam_plp_auto(caller.s_plp, &tid, &pos, &caller.n_plp)) != 0) && i_site < n_sites_reg)
++	while (((plp_ret = bam_mplp_auto(caller.s_plp, &tid, &pos, &caller.n_plp, &caller.v_plp)) > 0) && i_site < n_sites_reg)
+ 	{
+ 		if (pos+1 < beg) continue;
+ 		if (pos+1 > end) break;
+@@ -320,9 +330,9 @@ int genotype_bam_caller::glimpse_mpileup_reg(int i)
+ 
+ 	caller.gls.dp_ind =0;
+ 
+-	bam_plp_reset(caller.s_plp);
+-	bam_plp_destroy(caller.s_plp);
+-    return caller.n_plp < 0 ? -1 : 0;
++	bam_mplp_reset(caller.s_plp);
++	bam_mplp_destroy(caller.s_plp);
++    return plp_ret < 0 ? -1 : 0;
+ }
+ 
+ 
+@@ -344,7 +354,9 @@ void bcf_call_glfgen_min(call_t& caller, const variant* variant)
+ 
+ 		int b = seq_nt16_int[bam_seqi(bam_get_seq(p->b), p->qpos)]; // base
+ 		int q = (int)bam_get_qual(p->b)[p->qpos];
+-		if (b > 3 || q < caller.bca.min_bq) continue;
++		// Quality 0 also marks the dropped copy of a base covered by both mates, so it is skipped even with --baseq 0
++		if (b > 3 || q == 0 || q < caller.bca.min_bq) continue;
++		q = std::min(q, MAX_BASE_QUALITY);
+ 		caller.bca.bases.push_back(q<<5 | (int)bam_is_rev(p->b)<<4 | b);
+ 	}
+ 	caller.gls.read_depth = caller.bca.bases.size();
+diff --git a/phase/src/io/genotype_reader.cpp b/phase/src/io/genotype_reader.cpp
+index 6fe4ae2..de1dc93 100644
+--- a/phase/src/io/genotype_reader.cpp
++++ b/phase/src/io/genotype_reader.cpp
+@@ -774,12 +774,22 @@ void genotype_reader::parseRefGenotypes(bcf_srs_t * sr) {
+ 	bool a = false;
+ 	int *ptr;
+ 	float *ptr_f;
++	int rAC=0, nAC=0, *vAC = NULL;
++	int rAN=0, nAN=0, *vAN = NULL;
+ 
+ 	while (bcf_sr_next_line (sr))
+ 	{
+ 		if (bcf_sr_get_line(sr, 0)->n_allele != 2) continue; //always ref
+ 
+ 		line_ref =  bcf_sr_get_line(sr, 0);
++
++		//Skip the monomorphic records scanGenotypesCommon skipped, so that i_site indexes the same sites
++		rAC = bcf_get_info_int32(sr->readers[0].header, line_ref, "AC", &vAC, &nAC);
++		rAN = bcf_get_info_int32(sr->readers[0].header, line_ref, "AN", &vAN, &nAN);
++		if ((nAC!=1)||(nAN!=1)) vrb.error("VCF for reference panel needs AC/AN INFO fields to be present");
++		calt = vAC[0]; cref = (vAN[0] - vAC[0]);
++		if (std::min(calt, cref) == 0 && !keep_mono) continue;
++
+ 		if (i_site==0) set_ploidy_ref(sr,0);
+ 
+ 		ngt_ref = bcf_get_genotypes(sr->readers[0].header, line_ref, &gt_arr_ref, &ngt_arr_ref);
+@@ -808,6 +818,8 @@ void genotype_reader::parseRefGenotypes(bcf_srs_t * sr) {
+ 	}
+ 	if (sr->errnum) vrb.error("Error while parsing reference panel: " + std::string(bcf_sr_strerror(sr->errnum)));
+ 	free(gt_arr_ref);
++	free(vAC);
++	free(vAN);
+ 
+ 	// Report
+ 	vrb.bullet("Reference panel parsing done ("+stb.str(tac.rel_time()*1.0/1000, 2) + "s)");
+diff --git a/phase/src/io/genotype_writer.cpp b/phase/src/io/genotype_writer.cpp
+index 8b56381..40b05c0 100644
+--- a/phase/src/io/genotype_writer.cpp
++++ b/phase/src/io/genotype_writer.cpp
+@@ -71,7 +71,7 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
+ 	else bcf_hdr_append(hdr, std::string("##contig=<ID="+ V.chrid + ">").c_str());
+ 	bcf_hdr_append(hdr, "##INFO=<ID=RAF,Number=A,Type=Float,Description=\"ALT allele frequency in the reference panel\">");
+ 	bcf_hdr_append(hdr, "##INFO=<ID=AF,Number=A,Type=Float,Description=\"ALT allele frequency computed from DS/GP field across target samples\">");
+-	if (H.fploidy>0) bcf_hdr_append(hdr, "##INFO=<ID=INFO,Number=A,Type=Float,Description=\"IMPUTE info quality score for diploid samples\">");
++	bcf_hdr_append(hdr, "##INFO=<ID=INFO,Number=A,Type=Float,Description=\"IMPUTE info quality score\">");
+ 	bcf_hdr_append(hdr, "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Phased genotypes\">");
+ 	bcf_hdr_append(hdr, "##FORMAT=<ID=DS,Number=1,Type=Float,Description=\"Genotype dosage\">");
+ 	bcf_hdr_append(hdr, "##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype posterior probabilities\">");
+@@ -190,24 +190,22 @@ void genotype_writer::writeGenotypes(const std::string fname, OutputFormat outpu
+ 			}
+ 			for (int q = 0; q < ps_n && std::accumulate(std::next(posteriors,(H.max_ploidy+1)*i+0), std::next(posteriors,(H.max_ploidy+1)*i+G.vecG[i]->ploidy+1), 0.0f)<0.9999f; ++q) *ps_ptr[q] += 0.001f;
+ 
+-			// Compute INFO/INFO statistics
++			// Compute INFO/INFO statistics: sums of E[G] and E[G]^2, and of E[G^2], which is
++			// gp1 + 4*gp2 for a diploid sample and gp1 (= DS) for a haploid one.
+ 			ds_sum += ds;
+-			if (H.fploidy == 2)
+-			{
+-				ds2_sum += ds * ds;
+-				ds4_sum += gp1 + 4.0*gp2;
+-			}
++			ds2_sum += ds * ds;
++			ds4_sum += (G.vecG[i]->ploidy > 1) ? gp1 + 4.0*gp2 : gp1;
+ 		}
+ 
+ 		// Update INFO fields
+ 		float freq_alt_refp = V.vec_pos[l]->calt * 1.0f / (V.vec_pos[l]->calt + V.vec_pos[l]->cref);
+ 		float freq_alt_main = ds_sum / H.n_tar_haps;
+-		float infoscore = (H.fploidy == 2 && freq_alt_main>0.0 && freq_alt_main<1.0) ? (float)(1.0 - (ds4_sum - ds2_sum) / (H.n_tar_haps * freq_alt_main * (1.0 - freq_alt_main))) : 1.0f;
++		float infoscore = (freq_alt_main>0.0 && freq_alt_main<1.0) ? (float)(1.0 - (ds4_sum - ds2_sum) / (H.n_tar_haps * freq_alt_main * (1.0 - freq_alt_main))) : 1.0f;
+ 		infoscore = (infoscore<0.0f)?0.0f:infoscore;
+ 		infoscore = roundf(infoscore * 1000.0) / 1000.0;
+ 		bcf_update_info_float(hdr, rec, "RAF", &freq_alt_refp, 1);
+ 		bcf_update_info_float(hdr, rec, "AF", &freq_alt_main, 1);
+-		if (H.fploidy>0) bcf_update_info_float(hdr, rec, "INFO", &infoscore, 1);
++		bcf_update_info_float(hdr, rec, "INFO", &infoscore, 1);
+ 
+ 		// Update FORMAT fields
+ 		bcf_update_genotypes(hdr, rec, genotypes, bcf_hdr_nsamples(hdr)*H.max_ploidy);

@@ -70,6 +70,42 @@ static void pileup(const char *path, char base, int reads) {
     std::cout << "PASS normalized PL, zero-depth records and cached split SNPs ("
               << base << ", reads=" << reads << ")\n";
 }
+// Calls one diploid SNP at chr1:1 from SAM records; returns its PL triple and read depth.
+static std::pair<std::vector<unsigned char>, int> call_site(const char *path, const std::string &records) {
+    std::ofstream sam(path);
+    sam << "@HD\tVN:1.6\tSO:coordinate\n@SQ\tSN:chr1\tLN:100\n" << records;
+    sam.close();
+    variant_map V; V.push(site(1, "A", "C", VCF_SNP, 0));
+    haplotype_set H; genotype_set G; glimpse_mpileup M;
+    M.tar_ploidy = {2}; M.min_bq = 1; M.max_dp = 100; M.min_mq = 0; M.fflag = 0;
+    M.keep_orphan = true; M.check_orientation = M.check_proper_pair = false;
+    auto *g = new genotype("sample", 0, 1, 2, 0); g->allocate(); G.vecG.push_back(g);
+    G.stats.cov_ind.resize(1); G.stats.depth_count.assign(1, std::vector<int>(101));
+    genotype_bam_caller c(H, G, V, M, "chr1:1-1", 1, 1, "standard", false);
+    c.caller.ploidy = 2; c.aux_data.fp = sam_open(path, "r");
+    check(c.aux_data.fp, "open SAM"); c.aux_data.hdr = sam_hdr_read(c.aux_data.fp);
+    check(c.aux_data.hdr, "read SAM header");
+    rng.setSeed(17);
+    check(c.glimpse_mpileup_reg(0) == 0, "pileup status");
+    int depth = 0;
+    for (int d = 0; d <= 100; ++d) if (G.stats.depth_count[0][d]) depth = d;
+    return {std::vector<unsigned char>(g->GL.begin(), g->GL.begin()+3), depth};
+}
+static void base_quality(const char *path) {
+    const auto read = [](const char *name, int flag, char qual) {
+        return std::string(name) + "\t" + std::to_string(flag) + "\tchr1\t1\t60\t1M\t=\t1\t0\tC\t" + qual + "\n";
+    };
+    // Phred+33: '5' = Q20, 'I' = Q40, ']' = Q60
+    const auto q40 = call_site(path, read("r", 0, 'I'));
+    const auto q60 = call_site(path, read("r", 0, ']'));
+    check(q60 == q40, "base qualities above Q40 are used as Q40");
+    const auto pair = call_site(path, read("p", 99, '5') + read("p", 147, '5'));
+    const auto distinct = call_site(path, read("a", 0, '5') + read("b", 0, '5'));
+    check(pair.second == 1 && distinct.second == 2, "overlapping mates count as one read");
+    check(pair.first == q40.first && pair.first != distinct.first,
+          "agreeing overlapping mates combine into one base of summed quality");
+    std::cout << "PASS Q40 base-quality cap and overlapping mates counted once\n";
+}
 static void likelihoods() {
     variant v(1, ".", "A", "C", VCF_SNP, 0, 1, 1, true);
     call_t one{}; one.ploidy = 1; one.bca.max_dp = 100; one.bca.min_bq = 0;
@@ -129,7 +165,7 @@ static void phasing() {
 int main(int argc, char **argv) {
     try { check(argc == 2, "SAM path argument");
         for (int reads : {1,8}) for (char base : {'A','C'}) pileup(argv[1], base, reads);
-        likelihoods(); phasing();
+        base_quality(argv[1]); likelihoods(); phasing();
     } catch (const std::exception &e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }
 }
 CPP

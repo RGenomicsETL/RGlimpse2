@@ -47,6 +47,17 @@ The patches in [`series`](series) are applied in order:
     draws. Checkpoint input/output and BGEN are explicitly unsupported with
     sample export; existing default behavior is preserved.
 
+14. accuracy fixes from upstream: direct-alignment base qualities capped at
+    Q40 and overlapping mates of a proper pair counted once
+    ([#325](https://github.com/odelaneau/GLIMPSE/pull/325)); monomorphic
+    reference records skipped when parsing the panel for BAM input, so the
+    scan and parse passes index the same sites
+    ([#340](https://github.com/odelaneau/GLIMPSE/pull/340)); INFO scores for
+    haploid and mixed-ploidy targets
+    ([#334](https://github.com/odelaneau/GLIMPSE/pull/334)); and chunk buffer
+    sizes in cM kept as floating point (upstream commit
+    [`b062860`](https://github.com/odelaneau/GLIMPSE/commit/b06286032d548ae920032a39dd400b5765779021)).
+
 Patches 1-7 are frozen at commit `095ebfeb09305ddb47237d04da37dcece9a707e8`.
 Patch 8 captures that base through `685da6457a673fad7d89932f3cd130fd02903395`;
 patch 9 captures the build flags through `5f7e69792b3755ac7c9faa694f94a0b42d405ae4`.
@@ -54,7 +65,9 @@ Patch 10 is frozen at `2f79f47711da474f6565546d51274c84ae8b4010`;
 patch 11 is a diff against that commit. Layers may touch files that
 earlier patches already changed.
 
-Run `dev-notes/test-upstream-correctness.sh` for patch 10's native regression
+Patch 14 is a diff against `147f15973db973d7c4b0b61580e277bfd6eb157a`.
+
+Run `dev-notes/test-upstream-correctness.sh` for the native regression
 checks; it requires a C++17 compiler and HTSlib/Boost development libraries.
 
 `Single-ALT` describes the representation consumed by GLIMPSE2. A multiallelic
