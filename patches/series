@@ -12,3 +12,4 @@
 0012-ligate-diploid-alleles-and-phase-sets.patch
 0013-subsample-bam-read-templates.patch
 0014-upstream-accuracy-fixes.patch
+0015-validate-reference-ac-an-values.patch

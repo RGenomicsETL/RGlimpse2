@@ -66,8 +66,9 @@ Required with \code{reference_fasta} and must be \code{paste0(reference_fasta, "
 
 \item{mapq}{Minimum read mapping quality.}
 
-\item{baseq}{Minimum base quality. Qualities above 40 are used as 40, and
-bases covered by both mates of an overlapping proper pair count once.}
+\item{baseq}{Minimum base quality. At SNPs, qualities above 40 are used as
+40, and bases covered by both mates of an overlapping proper pair count
+once. Indel likelihoods from \code{call_indels = TRUE} use uncapped qualities.}
 
 \item{max_depth}{Maximum reads retained at one site before downsampling.}
 

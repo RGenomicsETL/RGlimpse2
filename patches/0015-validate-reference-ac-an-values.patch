@@ -1,0 +1,31 @@
+diff --git a/phase/src/io/genotype_reader.cpp b/phase/src/io/genotype_reader.cpp
+index de1dc93..b8bee34 100644
+--- a/phase/src/io/genotype_reader.cpp
++++ b/phase/src/io/genotype_reader.cpp
+@@ -268,7 +268,7 @@ void genotype_reader::scanGenotypesCommon(bcf_srs_t * sr, int ref_sr_n /* Refere
+ 		//Get AC / AN
+ 		rAC = bcf_get_info_int32(sr->readers[ref_sr_n].header, line_ref, "AC", &vAC, &nAC);
+ 		rAN = bcf_get_info_int32(sr->readers[ref_sr_n].header, line_ref, "AN", &vAN, &nAN);
+-		if ((nAC!=1)||(nAN!=1)) vrb.error("VCF for reference panel needs AC/AN INFO fields to be present");
++		if (rAC != 1 || rAN != 1 || vAC[0] == bcf_int32_missing || vAN[0] == bcf_int32_missing) vrb.error("VCF for reference panel needs one AC and one AN INFO value at each biallelic record, missing at position: " + stb.str(line_ref->pos + 1));
+ 		calt = vAC[0]; cref = (vAN[0] - vAC[0]);
+ 
+ 		//TODO: Check AN for missing data too
+@@ -603,7 +603,7 @@ void genotype_reader::parseGenotypes(bcf_srs_t * sr) {
+ 		line_ref =  bcf_sr_get_line(sr, 1);
+ 		rAC = bcf_get_info_int32(sr->readers[1].header, line_ref, "AC", &vAC, &nAC);
+ 		rAN = bcf_get_info_int32(sr->readers[1].header, line_ref, "AN", &vAN, &nAN);
+-		if ((nAC!=1)||(nAN!=1)) vrb.error("VCF for reference panel needs AC/AN INFO fields to be present");
++		if (rAC != 1 || rAN != 1 || vAC[0] == bcf_int32_missing || vAN[0] == bcf_int32_missing) vrb.error("VCF for reference panel needs one AC and one AN INFO value at each biallelic record, missing at position: " + stb.str(line_ref->pos + 1));
+ 		calt = vAC[0]; cref = (vAN[0] - vAC[0]);
+ 
+ 		if (std::min(calt, cref) == 0 && !keep_mono) continue;
+@@ -786,7 +786,7 @@ void genotype_reader::parseRefGenotypes(bcf_srs_t * sr) {
+ 		//Skip the monomorphic records scanGenotypesCommon skipped, so that i_site indexes the same sites
+ 		rAC = bcf_get_info_int32(sr->readers[0].header, line_ref, "AC", &vAC, &nAC);
+ 		rAN = bcf_get_info_int32(sr->readers[0].header, line_ref, "AN", &vAN, &nAN);
+-		if ((nAC!=1)||(nAN!=1)) vrb.error("VCF for reference panel needs AC/AN INFO fields to be present");
++		if (rAC != 1 || rAN != 1 || vAC[0] == bcf_int32_missing || vAN[0] == bcf_int32_missing) vrb.error("VCF for reference panel needs one AC and one AN INFO value at each biallelic record, missing at position: " + stb.str(line_ref->pos + 1));
+ 		calt = vAC[0]; cref = (vAN[0] - vAC[0]);
+ 		if (std::min(calt, cref) == 0 && !keep_mono) continue;
+ 

@@ -103,9 +103,12 @@ write_layer_patch 0013-subsample-bam-read-templates.patch \
   phase/src/containers/glimpse_mpileup.cpp phase/src/containers/glimpse_mpileup.h \
   phase/src/io/genotype_bam_caller.cpp
 write_layer_patch 0014-upstream-accuracy-fixes.patch \
-  147f15973db973d7c4b0b61580e277bfd6eb157a -- \
+  147f15973db973d7c4b0b61580e277bfd6eb157a 452eef1cad3b7ed040ae52ffffcec47e5e9eadef -- \
   chunk/src/chunker/chunker_algorithm.cpp chunk/src/chunker/chunker_parameters.cpp \
   phase/src/containers/glimpse_mpileup.h phase/src/io/genotype_bam_caller.cpp \
   phase/src/io/genotype_reader.cpp phase/src/io/genotype_writer.cpp
+write_layer_patch 0015-validate-reference-ac-an-values.patch \
+  452eef1cad3b7ed040ae52ffffcec47e5e9eadef -- \
+  phase/src/io/genotype_reader.cpp
 
 printf 'Regenerated upstream patch series against %s\n' "$upstream_commit"

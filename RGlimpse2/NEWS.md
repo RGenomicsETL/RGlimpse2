@@ -1,7 +1,14 @@
+# RGlimpse2 0.0.0.9010
+
+- Stop with the record position when a reference panel record lacks a
+  single non-missing AC or AN value. A missing value no longer reuses the
+  counts of the previous record.
+
 # RGlimpse2 0.0.0.9009
 
-- Cap direct-alignment base qualities at Q40 and count bases covered by both
-  mates of an overlapping proper pair once (upstream #325). On NA12878 at 1x
+- Cap direct-alignment SNP base qualities at Q40 and count bases covered by
+  both mates of an overlapping proper pair once (upstream #325). Indel
+  likelihoods from `call_indels = TRUE` are unchanged. On NA12878 at 1x
   (1000G chr22, 2.8 Mb), r2 rises from 0.20 to 0.36 at AF 0.1-1% and from
   0.94 to 0.96 at AF 20-50%.
 - Skip monomorphic reference records in the BAM-input panel parse as the scan
